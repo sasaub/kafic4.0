@@ -5,6 +5,7 @@ import { OrderProvider } from "./context/OrderContext";
 import { AuthProvider } from "./context/AuthContext";
 import { MenuProvider } from "./context/MenuContext";
 import { TablesProvider } from "./context/TablesContext";
+import { ToastProvider } from "./components/ToastProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +36,9 @@ export default function RootLayout({
           <MenuProvider>
             <TablesProvider>
               <OrderProvider>
-                {children}
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
               </OrderProvider>
             </TablesProvider>
           </MenuProvider>

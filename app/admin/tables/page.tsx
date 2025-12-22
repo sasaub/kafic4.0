@@ -4,15 +4,19 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTables, Table } from '../../context/TablesContext';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../../components/ToastProvider';
+import Link from 'next/link';
 
 export default function AdminTablesPage() {
   const { user, logout, isLoading } = useAuth();
   const { tables, addTable: addTableToContext, updateTableStatus, updateTableMonthlyPayment } = useTables(); // Koristi globalni context
+  const { showToast } = useToast();
   const router = useRouter();
   
   // HOOKS moraju biti na vrhu UVEK!
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTable, setNewTable] = useState({ number: '', capacity: 4, monthlyPayment: false });
+  const [showQRDialog, setShowQRDialog] = useState<{ tableNumber: string | number; qrURL: string } | null>(null);
 
   // Auth check - POSLE svih hooks!
   useEffect(() => {
@@ -37,28 +41,34 @@ export default function AdminTablesPage() {
     updateTableStatus(id, newStatus);
   };
 
-  const handleAddTable = () => {
+  const handleAddTable = async () => {
     if (!newTable.number || newTable.number.trim() === '') {
-      alert('Unesite naziv/broj stola');
+      showToast('Unesite naziv/broj stola', 'warning');
       return;
     }
 
     // Proveri da li sto već postoji (case-insensitive)
     // Konvertuj u string jer stari podaci mogu imati number kao number
     if (tables.find(t => String(t.number).toLowerCase().trim() === newTable.number.toLowerCase().trim())) {
-      alert(`Sto "${newTable.number}" već postoji!`);
+      showToast(`Sto "${newTable.number}" već postoji!`, 'warning');
       return;
     }
 
-    addTableToContext({
-      number: newTable.number.trim(),
-      capacity: newTable.capacity,
-      status: 'Slobodan',
-      monthlyPayment: newTable.monthlyPayment
-    });
-    
-    setNewTable({ number: '', capacity: 4, monthlyPayment: false });
-    setShowAddForm(false);
+    try {
+      await addTableToContext({
+        number: newTable.number.trim(),
+        capacity: newTable.capacity,
+        status: 'Slobodan',
+        monthlyPayment: newTable.monthlyPayment
+      });
+      
+      setNewTable({ number: '', capacity: 4, monthlyPayment: false });
+      setShowAddForm(false);
+      showToast('Sto je uspešno dodat', 'success');
+    } catch (error) {
+      console.error('Error adding table:', error);
+      showToast('Greška pri dodavanju stola', 'error');
+    }
   };
 
   const getStatusColor = (status: Table['status']) => {
@@ -70,9 +80,22 @@ export default function AdminTablesPage() {
     }
   };
 
-  const downloadQR = (tableNumber: number, qrCode: string) => {
-    const qrURL = `${window.location.origin}/guest?table=${tableNumber}`;
-    alert(`QR kod za Sto ${tableNumber}\n\nURL: ${qrURL}\n\nKreirajte QR kod koji vodi na ovaj URL koristeći bilo koji QR generator.`);
+  const downloadQR = (tableNumber: string | number, qrCode: string) => {
+    // Enkoduj tableNumber za URL (rukuje razmacima i specijalnim karakterima)
+    const tableStr = String(tableNumber);
+    const encodedTable = encodeURIComponent(tableStr);
+    
+    // Generiši URL - koristi window.location.origin ili fallback
+    let origin = '';
+    if (typeof window !== 'undefined' && window.location) {
+      origin = window.location.origin;
+    } else {
+      // Fallback za server-side rendering
+      origin = 'http://localhost:3000';
+    }
+    
+    const qrURL = `${origin}/guest?table=${encodedTable}`;
+    setShowQRDialog({ tableNumber: tableStr, qrURL });
   };
 
   return (
@@ -85,9 +108,9 @@ export default function AdminTablesPage() {
             <p className="text-gray-300">Pregled stolova i QR kodova</p>
           </div>
           <div className="flex gap-3">
-            <a href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+            <Link href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
               ← Nazad
-            </a>
+            </Link>
             <button 
               onClick={logout}
               className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
@@ -227,7 +250,13 @@ export default function AdminTablesPage() {
                   <input
                     type="checkbox"
                     checked={table.monthlyPayment || false}
-                    onChange={(e) => updateTableMonthlyPayment(table.id, e.target.checked)}
+                    onChange={async (e) => {
+                      try {
+                        await updateTableMonthlyPayment(table.id, e.target.checked);
+                      } catch (error) {
+                        console.error('Error updating monthly payment:', error);
+                      }
+                    }}
                     className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500"
                   />
                   <span className="text-sm font-medium text-gray-700">
@@ -252,6 +281,36 @@ export default function AdminTablesPage() {
           </div>
         </div>
       </div>
+
+      {/* QR Dialog */}
+      {showQRDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md">
+            <h3 className="text-xl font-bold mb-4">QR kod za Sto {showQRDialog.tableNumber}</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">URL:</label>
+              <input
+                type="text"
+                value={showQRDialog.qrURL}
+                readOnly
+                className="w-full px-4 py-2 border rounded-lg bg-gray-50"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Kreirajte QR kod koji vodi na ovaj URL koristeći bilo koji QR generator.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowQRDialog(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
+                Zatvori
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

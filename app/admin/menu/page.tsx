@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 export default function AdminMenuPage() {
   const { user, logout, isLoading } = useAuth();
   const { menuItems, categories, addMenuItem, updateMenuItem, deleteMenuItem } = useMenu(); // Koristi globalni meni
+  const { showToast } = useToast();
   const router = useRouter();
   
   // HOOKS na vrhu!
@@ -36,22 +37,38 @@ export default function AdminMenuPage() {
   }
 
   if (!user || user.role !== 'admin') {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-2xl">Pristup odbijen</div>
+      </div>
+    );
   }
 
-  const deleteItem = (id: number) => {
-    deleteMenuItem(id);
+  const deleteItem = async (id: number) => {
+    try {
+      await deleteMenuItem(id);
+      showToast('Stavka je uspešno obrisana', 'success');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      showToast('Greška pri brisanju stavke', 'error');
+    }
   };
 
-  const addItem = () => {
+  const addItem = async () => {
     if (!newItem.name || !newItem.price) {
-      alert('Unesite naziv i cenu jela');
+      showToast('Unesite naziv i cenu jela', 'warning');
       return;
     }
     
-    addMenuItem(newItem);
-    setNewItem({ name: '', description: '', price: 0, category: categories[0]?.name || 'Glavna jela' });
-    setShowAddForm(false);
+    try {
+      await addMenuItem(newItem);
+      setNewItem({ name: '', description: '', price: 0, category: categories[0]?.name || 'Glavna jela' });
+      setShowAddForm(false);
+      showToast('Stavka je uspešno dodata', 'success');
+    } catch (error) {
+      console.error('Error adding item:', error);
+      showToast('Greška pri dodavanju stavke', 'error');
+    }
   };
 
   const startEdit = (item: typeof menuItems[0]) => {
@@ -65,17 +82,23 @@ export default function AdminMenuPage() {
     setShowAddForm(true);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingItem) return;
     if (!newItem.name || !newItem.price) {
-      alert('Unesite naziv i cenu jela');
+      showToast('Unesite naziv i cenu jela', 'warning');
       return;
     }
     
-    updateMenuItem(editingItem, newItem);
-    setEditingItem(null);
-    setNewItem({ name: '', description: '', price: 0, category: categories[0]?.name || 'Glavna jela' });
-    setShowAddForm(false);
+    try {
+      await updateMenuItem(editingItem, newItem);
+      setEditingItem(null);
+      setNewItem({ name: '', description: '', price: 0, category: categories[0]?.name || 'Glavna jela' });
+      setShowAddForm(false);
+      showToast('Stavka je uspešno ažurirana', 'success');
+    } catch (error) {
+      console.error('Error updating item:', error);
+      showToast('Greška pri ažuriranju stavke', 'error');
+    }
   };
 
   const cancelEdit = () => {
@@ -94,9 +117,9 @@ export default function AdminMenuPage() {
             <p className="text-gray-300">Dodajte, izmenite ili obrišite jela</p>
           </div>
           <div className="flex gap-3">
-            <a href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+            <Link href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
               ← Nazad
-            </a>
+            </Link>
             <button 
               onClick={logout}
               className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"

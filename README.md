@@ -1,113 +1,163 @@
-# 🍽️ QR Restoran - Moderan Sistem Naručivanja
+# QR Restaurant Management System
 
-Kompletan sistem za naručivanje hrane u restoranima putem QR koda, izgrađen sa Next.js 15.5.4, React 19 i Tailwind CSS.
+Sistem za upravljanje restoranom sa QR kodovima, porudžbinama i mesečnim plaćanjima.
 
-## 🚀 Pokretanje Projekta
+## Tehnologije
+
+- **Next.js 15** - React framework
+- **TypeScript** - Type safety
+- **MySQL** - Baza podataka
+- **Tailwind CSS** - Styling
+
+## Instalacija
+
+### 1. Kloniraj repozitorijum
+
+```bash
+git clone https://github.com/sasaub/kafic2.1.git
+cd kafic2.1
+```
+
+### 2. Instaliraj dependencies
 
 ```bash
 npm install
+```
+
+### 3. Postavi MySQL bazu podataka
+
+```bash
+# Prijavite se u MySQL
+mysql -u root -p
+
+# Pokrenite SQL skriptu
+source lib/db-schema.sql
+```
+
+Ili ručno:
+
+```sql
+CREATE DATABASE qr_restaurant CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE qr_restaurant;
+-- Zatim kopirajte SQL iz lib/db-schema.sql
+```
+
+### 4. Konfiguriši environment varijable
+
+Kreiraj `.env.local` fajl:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=qr_restaurant
+
+NODE_ENV=development
+PORT=3000
+```
+
+### 5. Pokreni aplikaciju
+
+```bash
+# Development
 npm run dev
+
+# Production build
+npm run build
+npm start
 ```
 
-Aplikacija će biti dostupna na **http://localhost:3000**
-
-## 📱 Funkcionalnosti
-
-### Za Goste (`/guest`)
-- **QR kod sistem** - Skeniranje stola za pristup meniju
-- **Interaktivan meni** - Pregled jela po kategorijama
-- **Korpa za naručivanje** - Dodavanje/uklanjanje stavki
-- **Instant naručivanje** - Direktno slanje narudžbine konobaru
-- **Prilagođljiv broj stola** - Mogućnost promene broja stola
-
-### Za Konobare (`/waiter`)
-- **Real-time narudžbine** - Automatsko prikazivanje novih narudžbina
-- **Upravljanje statusom** - Novo → U pripremi → Spremno → Dostavljeno
-- **Prioritet narudžbina** - 🔴 Visok, 🟡 Srednji, 🟢 Nizak (automatski na osnovu cene)
-- **Filter opcije** - Aktivne ili sve narudžbine
-- **Statistika u realnom vremenu** - Pregled broja narudžbina po statusu
-- **Štampanje računa** - Print funkcionalnost za svaku narudžbinu
-- **Mobilna optimizacija** - Prilagođen za telefon/tablet
-
-### Admin Panel (`/admin`)
-- **Dashboard** - Pregled statistike i aktivnosti
-- **Upravljanje menijem** (`/admin/menu`)
-  - Dodavanje novih jela
-  - Izmena postojećih
-  - Brisanje jela
-  - Organizacija po kategorijama
-- **Upravljanje narudžbama** (`/admin/orders`)
-  - Pregled svih narudžbina
-  - Ažuriranje statusa
-  - Filter po statusu
-- **Upravljanje stolovima** (`/admin/tables`)
-  - Pregled svih stolova
-  - QR kodovi za svaki sto
-  - Status stolova (Slobodan/Zauzet/Rezervisan)
-  - Preuzimanje QR kodova
-
-## 🎯 Kako Funkcioniše Sistem
-
-1. **Gost skenira QR kod** → otvara se `/guest` stranica sa menijem
-2. **Gost bira jela** → dodaje u korpu i klikne "Naruči"
-3. **Narudžbina se automatski pojavljuje** na konobar panelu (`/waiter`)
-4. **Konobar upravlja narudžbinom**:
-   - Prihvata narudžbu
-   - Označi kao spremno kada je jelo gotovo
-   - Štampa račun
-   - Dostavi gostima
-5. **Admin prati sve** kroz Admin Panel
-
-## 🛠️ Tehnologije
-
-- **Next.js 15.5.4** - React framework sa App Router
-- **React 19.1.0** - UI biblioteka
-- **TypeScript** - Type safety
-- **Tailwind CSS 4** - Styling
-- **React Context API** - State management za narudžbine
-- **Turbopack** - Ultra-brz bundler
-
-## 📂 Struktura Projekta
+## Struktura projekta
 
 ```
-qr-restaurant/
-├── app/
-│   ├── context/
-│   │   └── OrderContext.tsx      # Globalni state za narudžbine
-│   ├── admin/
-│   │   ├── page.tsx              # Admin dashboard
-│   │   ├── menu/page.tsx         # Upravljanje menijem
-│   │   ├── orders/page.tsx       # Upravljanje narudžbama
-│   │   └── tables/page.tsx       # Upravljanje stolovima
-│   ├── guest/
-│   │   └── page.tsx              # Stranica za goste
-│   ├── waiter/
-│   │   └── page.tsx              # Konobar panel
-│   ├── layout.tsx                # Root layout sa OrderProvider
-│   ├── page.tsx                  # Početna stranica
-│   └── globals.css               # Globalni stilovi
-├── package.json
-└── README.md
+app/
+├── api/              # API routes (backend)
+│   ├── orders/       # Porudžbine
+│   ├── menu/         # Meni stavke
+│   ├── categories/   # Kategorije
+│   ├── tables/       # Stolovi
+│   └── auth/         # Autentifikacija
+├── admin/            # Admin panel
+├── waiter-admin/     # Konobar-admin panel
+├── waiter/           # Konobar panel
+├── kitchen/          # Kuhinja panel
+├── guest/            # Gost panel (QR kod)
+└── context/          # React Context providers
+
+lib/
+└── db.ts             # MySQL konekcija
 ```
 
-## 🎨 Design
+## Funkcionalnosti
 
-- **Responsivni dizajn** - Radi na svim uređajima
-- **Moderna UI** - Čist i intuitivan interfejs
-- **Brze animacije** - Smooth transitions
-- **Jasna navigacija** - Lako snalaženje
+### Admin
+- Upravljanje menijem (dodavanje, izmena, brisanje)
+- Upravljanje kategorijama
+- Upravljanje stolovima
+- Pregled zarade (po danu ili periodu)
+- Statistika stolova po zaradi
 
-## 💡 Napomene
+### Konobar-Admin
+- Kreiranje porudžbina
+- Potvrđivanje pristiglih porudžbina
+- Automatsko prosleđivanje hrane na kuhinju
+- Podešavanje štampača
+- Upravljanje mesečnim stolovima
+- Unos uplata za mesečne stolove
 
-- **State Management**: Koristi React Context API za deljenje narudžbina
-- **Real-time sinhronizacija**: Sve stranice dele isti state
-- **Print funkcionalnost**: Browser native print sa formatiranim računom
-- **Automatski prioritet**: Narudžbine > 2000 RSD = visok, > 1000 RSD = srednji
+### Konobar
+- Pregled novih i svih porudžbina
+- Ažuriranje statusa porudžbina
+- Štampanje računa
 
-## 📄 Licenca
+### Kuhinja
+- Pregled novih porudžbina sa hranom
+- Prihvatanje porudžbina
+- Prikaz komentara uz hranu
 
-Projekat je kreiran za potrebe QR restoran sistema.
+### Gost (QR kod)
+- Pregled menija
+- Kreiranje porudžbine
 
----
+## Mesečni stolovi
 
-**Napravljen sa ❤️ koristeći Next.js i React**
+Stolovi mogu biti označeni kao "mesečni" (ne plaćaju odmah). Za te stolove:
+- Konobar-admin može da unese uplate
+- Prikazuje se istorija porudžbina i uplata
+- Automatski se računa ostatak (duguje/preplaćeno)
+
+## Štampanje
+
+Sistem podržava:
+- Mrežno štampanje (ESC/POS štampači preko IP adrese)
+- Browser štampanje (fallback)
+
+## Baza podataka
+
+Baza podataka se automatski kreira prilikom pokretanja SQL skripte. Tabele:
+- `users` - Korisnici sistema
+- `categories` - Kategorije jela/pića
+- `menu_items` - Stavke menija
+- `tables` - Stolovi
+- `monthly_payments` - Mesečna plaćanja
+- `orders` - Porudžbine
+- `order_items` - Stavke porudžbina
+
+## Default korisnici
+
+- **admin** / admin123
+- **konobar** / konobar123
+- **konobaradmin** / konobaradmin123
+- **kuhinja** / kuhinja123
+
+## Produkcija
+
+Za produkciju:
+1. Postavi environment varijable na serveru
+2. Build aplikacije: `npm run build`
+3. Pokreni sa PM2: `pm2 start npm --name "qr-restaurant" -- start`
+4. Konfiguriši Nginx kao reverse proxy
+
+## Licenca
+
+Privatni projekat

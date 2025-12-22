@@ -6,8 +6,8 @@ export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
-  category?: string; // Dodato da bi mogli da odredimo tip
-  comment?: string; // Opcioni komentar uz stavku (npr. "Bez luka", "Extra začini")
+  category?: string;
+  comment?: string;
 }
 
 export interface Order {
@@ -17,287 +17,159 @@ export interface Order {
   total: number;
   status: 'Novo' | 'Potvrđeno' | 'U pripremi' | 'Spremno' | 'Dostavljeno';
   time: string;
-  date: string; // Format: YYYY-MM-DD
+  date: string;
   priority: 'low' | 'medium' | 'high';
-  destination: 'kitchen' | 'waiter'; // Dodato polje za razdvajanje
+  destination: 'kitchen' | 'waiter';
 }
 
 interface OrderContextType {
   orders: Order[];
-  addOrder: (order: Omit<Order, 'id' | 'time' | 'date' | 'status' | 'priority' | 'destination'>) => void;
-  updateOrderStatus: (id: number, status: Order['status']) => void;
-  confirmOrder: (id: number) => void;
+  addOrder: (order: Omit<Order, 'id' | 'time' | 'date' | 'status' | 'priority' | 'destination'>) => Promise<void>;
+  updateOrderStatus: (id: number, status: Order['status']) => Promise<void>;
+  confirmOrder: (id: number) => Promise<{ success: boolean; message?: string }>;
+  deleteOrder: (id: number) => Promise<void>;
+  refreshOrders: () => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
-
-const STORAGE_KEY = 'qr-restaurant-orders';
-
-// Inicijalni podaci
-const getTodayDate = () => {
-  const today = new Date();
-  return today.toISOString().split('T')[0]; // YYYY-MM-DD
-};
-
-const initialOrders: Order[] = [
-  { 
-    id: 1, 
-    table: 'Sto 5', 
-    items: [
-      { name: 'Ćevapi', quantity: 2, price: 850, category: 'Glavna jela' },
-      { name: 'Coca Cola', quantity: 2, price: 200, category: 'Sokovi' }
-    ], 
-    total: 2100, 
-    status: 'Spremno', 
-    time: '14:30',
-    date: getTodayDate(),
-    priority: 'high',
-    destination: 'waiter'
-  },
-  { 
-    id: 2, 
-    table: 'Sto 3', 
-    items: [
-      { name: 'Pljeskavica', quantity: 1, price: 750, category: 'Glavna jela' },
-      { name: 'Sopska salata', quantity: 1, price: 400, category: 'Salate' }
-    ], 
-    total: 1150, 
-    status: 'U pripremi', 
-    time: '14:25',
-    date: getTodayDate(),
-    priority: 'medium',
-    destination: 'kitchen'
-  },
-];
 
 export function OrderProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Učitaj narudžbine iz localStorage pri mountu
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setOrders(JSON.parse(stored));
-      } catch (error) {
-        console.error('Error loading orders:', error);
-        setOrders(initialOrders);
-      }
-    } else {
-      setOrders(initialOrders);
-    }
-    setIsLoaded(true);
-  }, []);
-
-  // Sačuvaj narudžbine u localStorage pri svakoj promeni
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-    }
-  }, [orders, isLoaded]);
-
-  // Slušaj promene iz drugih tab-ova
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      // Samo reaguj na promene iz DRUGIH tab-ova
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const newOrders = JSON.parse(e.newValue);
-          setOrders(newOrders);
-        } catch (error) {
-          console.error('Error syncing orders:', error);
-        }
-      }
-    };
-
-    // storage event se automatski triggeruje samo iz drugih tab-ova
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const addOrder = (orderData: Omit<Order, 'id' | 'time' | 'date' | 'status' | 'priority' | 'destination'>) => {
-    const now = new Date();
-    const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-    const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    // Automatski prioritet na osnovu ukupne cene
-    let priority: Order['priority'] = 'low';
-    if (orderData.total > 2000) priority = 'high';
-    else if (orderData.total > 1000) priority = 'medium';
-    
-    // Kreiraj porudžbinu za konobara (potvrđivanje i razdvajanje se dešava pri potvrđivanju)
-    const newOrder: Order = {
-      ...orderData,
-      id: orders.length > 0 ? Math.max(...orders.map(o => o.id)) + 1 : 1,
-      time,
-      date,
-      status: 'Novo',
-      priority,
-      destination: 'waiter',
-    };
-    
-    setOrders(prev => [newOrder, ...prev]);
-  };
-
-  const updateOrderStatus = (id: number, status: Order['status']) => {
-    setOrders(prev => prev.map(order => 
-      order.id === id ? { ...order, status } : order
-    ));
-  };
-  
-  const confirmOrder = (id: number) => {
-    // Ažuriraj status I kreiraj kuhinjsku porudžbinu u jedan setOrders poziv
-    setOrders(prev => {
-      // Pronađi porudžbinu iz PREVIOUS state
-      const order = prev.find(o => o.id === id);
-      if (!order) return prev;
-      
-      // Proveri da li je već potvrđena - spreči duplo potvrđivanje
-      if (order.status === 'Potvrđeno') return prev;
-      
-      // Učitaj kategorije iz localStorage
-      const storedCategories = localStorage.getItem('qr-restaurant-categories');
-      let categories: { name: string; type: 'Hrana' | 'Piće' }[] = [];
-      
-      if (storedCategories) {
-        try {
-          categories = JSON.parse(storedCategories);
-        } catch (error) {
-          console.error('Error loading categories:', error);
-        }
-      }
-      
-      // Razdvoji hranu
-      const foodItems: Order['items'] = [];
-      let foodTotal = 0;
-      
-      // Fallback kategorije ako localStorage nije dostupan
-      const fallbackCategories = [
-        { id: 1, name: 'Glavna jela', type: 'Hrana' as const },
-        { id: 2, name: 'Salate', type: 'Hrana' as const },
-        { id: 3, name: 'Deserti', type: 'Hrana' as const },
-        { id: 4, name: 'Sokovi', type: 'Piće' as const },
-        { id: 5, name: 'Kafe', type: 'Piće' as const },
-        { id: 6, name: 'Alkohol', type: 'Piće' as const },
-      ];
-      
-      if (!categories || categories.length === 0) {
-        categories = fallbackCategories;
-      }
-      
-      order.items.forEach(item => {
-        if (!item.category) return;
-        
-        // Pokušaj da pronađeš kategoriju - proveri tačno poklapanje
-        let itemCategory = categories.find(c => c.name === item.category);
-        
-        // Ako ne pronađeš, pokušaj sa trim i case-insensitive
-        if (!itemCategory) {
-          itemCategory = categories.find(c => 
-            c.name.trim().toLowerCase() === item.category.trim().toLowerCase()
-          );
-        }
-        
-        if (itemCategory?.type === 'Hrana') {
-          // Dodaj stavku sa komentarom ako postoji
-          foodItems.push({
-            ...item,
-            comment: item.comment // Sačuvaj komentar uz hranu
-          });
-          foodTotal += item.price * item.quantity;
-        }
+  // Učitaj porudžbine sa API-ja
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+        credentials: 'same-origin', // Dodaj credentials za bolju kompatibilnost
       });
       
-      // Ažuriraj status porudžbine
-      const updatedOrders: Order[] = prev.map(o => 
-        o.id === id ? { ...o, status: 'Potvrđeno' as const } : o
-      );
-      
-      // Ako ima hrane, kreiraj novu porudžbinu za kuhinju
-      if (foodItems.length > 0) {
-        const now = new Date();
-        const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-        const date = now.toISOString().split('T')[0];
-        
-        let foodPriority: Order['priority'] = 'low';
-        if (foodTotal > 2000) foodPriority = 'high';
-        else if (foodTotal > 1000) foodPriority = 'medium';
-        
-        // Koristimo ID iz PREVIOUS state da bismo bili sigurni da neće biti duplikata
-        const newId = prev.length > 0 ? Math.max(...prev.map(o => o.id)) + 1 : 1;
-        
-        const kitchenOrder: Order = {
-          table: order.table,
-          items: foodItems,
-          total: foodTotal,
-          id: newId,
-          time,
-          date,
-          status: 'Novo',
-          priority: foodPriority,
-          destination: 'kitchen',
-        };
-        
-        console.log('Creating kitchen order:', kitchenOrder);
-        console.log('Kitchen order details:', {
-          id: kitchenOrder.id,
-          destination: kitchenOrder.destination,
-          status: kitchenOrder.status,
-          table: kitchenOrder.table,
-          itemsCount: kitchenOrder.items.length,
-          total: kitchenOrder.total
-        });
-        
-        // Vrati kuhinjsku porudžbinu i ažurirane porudžbine
-        const result = [kitchenOrder, ...updatedOrders];
-        
-        console.log('Total orders after adding kitchen order:', result.length);
-        console.log('Kitchen orders in result:', result.filter(o => o.destination === 'kitchen').map(o => ({
-          id: o.id,
-          destination: o.destination,
-          status: o.status,
-          table: o.table
-        })));
-        
-        // Proveri da li se kuhinjska porudžbina pravilno dodaje
-        const kitchenOrdersInResult = result.filter(o => o.destination === 'kitchen' && o.status === 'Novo');
-        console.log('New kitchen orders in result:', kitchenOrdersInResult.length, kitchenOrdersInResult);
-        
-        // Automatski štampaj kuhinjsku porudžbinu nakon kratke pauze
-        // Koristimo setTimeout da osiguramo da se state ažurira pre štampanja
-        setTimeout(() => {
-          // Importujemo funkcije za štampanje dinamički
-          import('../utils/printer').then(({ printToNetworkPrinter, printViaBrowser, getPrinterSettings }) => {
-            const printerSettings = getPrinterSettings();
-            if (printerSettings && printerSettings.enabled && printerSettings.ipAddress) {
-              printToNetworkPrinter(kitchenOrder).catch(() => {
-                printViaBrowser(kitchenOrder);
-              });
-            } else {
-              printViaBrowser(kitchenOrder);
-            }
-          });
-        }, 200);
-        
-        // Sačuvaj u localStorage odmah
-        console.log('Saving to localStorage, total orders:', result.length);
-        setTimeout(() => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
-          console.log('Saved to localStorage');
-        }, 0);
-        
-        return result;
-      } else {
-        console.log('No food items found, not creating kitchen order');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to fetch orders:', response.status, response.statusText, errorText);
+        throw new Error(`Failed to fetch orders: ${response.status} ${response.statusText}`);
       }
       
-      return updatedOrders;
-    });
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Invalid response type:', contentType);
+        throw new Error('Invalid response type from server');
+      }
+      
+      const data = await response.json();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      console.error('Error fetching orders:', error);
+      console.error('Error details:', error.message, error.stack);
+      // Postavi prazan array umesto da ostane undefined
+      setOrders([]);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    
+    // Optimizovan polling - 1 sekund za brži odziv
+    const interval = setInterval(fetchOrders, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const addOrder = async (orderData: Omit<Order, 'id' | 'time' | 'date' | 'status' | 'priority' | 'destination'>) => {
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+      
+      if (!response.ok) throw new Error('Failed to create order');
+      
+      // Refresh orders
+      await fetchOrders();
+    } catch (error) {
+      console.error('Error creating order:', error);
+      throw error;
+    }
+  };
+
+  const updateOrderStatus = async (id: number, status: Order['status']) => {
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to update order');
+      
+      // Refresh orders
+      await fetchOrders();
+    } catch (error) {
+      console.error('Error updating order:', error);
+      throw error;
+    }
+  };
+
+  const confirmOrder = async (id: number) => {
+    try {
+      const response = await fetch('/api/orders/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      
+      if (!response.ok) {
+        // Proveri da li je response JSON ili HTML
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to confirm order');
+        } else {
+          // Ako nije JSON, verovatno je HTML error page
+          const text = await response.text();
+          console.error('Non-JSON response:', text.substring(0, 200));
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
+      }
+      
+      const result = await response.json();
+      
+      // Refresh orders
+      await fetchOrders();
+      
+      // Vrati result da waiter-admin može da štampa
+      return result;
+    } catch (error: any) {
+      console.error('Error confirming order:', error);
+      throw error;
+    }
+  };
+
+  const deleteOrder = async (id: number) => {
+    try {
+      const response = await fetch(`/api/orders?id=${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete order');
+      
+      // Refresh orders
+      await fetchOrders();
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      throw error;
+    }
   };
 
   return (
-    <OrderContext.Provider value={{ orders, addOrder, updateOrderStatus, confirmOrder }}>
+    <OrderContext.Provider value={{ orders, addOrder, updateOrderStatus, confirmOrder, deleteOrder, refreshOrders: fetchOrders }}>
       {children}
     </OrderContext.Provider>
   );

@@ -19,140 +19,173 @@ export interface Category {
 interface MenuContextType {
   menuItems: MenuItem[];
   categories: Category[];
-  addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
-  updateMenuItem: (id: number, item: Partial<MenuItem>) => void;
-  deleteMenuItem: (id: number) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  deleteCategory: (id: number) => void;
+  isLoaded: boolean;
+  addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
+  updateMenuItem: (id: number, item: Partial<MenuItem>) => Promise<void>;
+  deleteMenuItem: (id: number) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  deleteCategory: (id: number) => Promise<void>;
+  refreshMenu: () => Promise<void>;
+  refreshCategories: () => Promise<void>;
 }
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
-
-const STORAGE_KEY_MENU = 'qr-restaurant-menu';
-const STORAGE_KEY_CATEGORIES = 'qr-restaurant-categories';
-
-const initialCategories: Category[] = [
-  { id: 1, name: 'Glavna jela', type: 'Hrana' },
-  { id: 2, name: 'Salate', type: 'Hrana' },
-  { id: 3, name: 'Deserti', type: 'Hrana' },
-  { id: 4, name: 'Sokovi', type: 'Piće' },
-  { id: 5, name: 'Kafe', type: 'Piće' },
-  { id: 6, name: 'Alkohol', type: 'Piće' },
-];
-
-const initialMenu: MenuItem[] = [
-  { id: 1, name: 'Ćevapi', description: '10 komada sa lukom i lepinjom', price: 850, category: 'Glavna jela' },
-  { id: 2, name: 'Pljeskavica', description: 'Velika sa kajmakom', price: 750, category: 'Glavna jela' },
-  { id: 3, name: 'Grčka salata', description: 'Svježe povrće sa feta sirom', price: 450, category: 'Salate' },
-  { id: 4, name: 'Sopska salata', description: 'Paradajz, krastavac, paprika', price: 400, category: 'Salate' },
-  { id: 5, name: 'Coca Cola', description: '0.33l', price: 200, category: 'Sokovi' },
-  { id: 6, name: 'Voda', description: '0.5l', price: 150, category: 'Sokovi' },
-  { id: 7, name: 'Espresso', description: 'Jaka kafa', price: 180, category: 'Kafe' },
-];
 
 export function MenuProvider({ children }: { children: ReactNode }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Učitaj meni i kategorije iz localStorage
-  useEffect(() => {
-    const storedMenu = localStorage.getItem(STORAGE_KEY_MENU);
-    const storedCategories = localStorage.getItem(STORAGE_KEY_CATEGORIES);
-    
-    if (storedMenu) {
-      try {
-        setMenuItems(JSON.parse(storedMenu));
-      } catch (error) {
-        console.error('Error loading menu:', error);
-        setMenuItems(initialMenu);
+  // Učitaj meni sa API-ja
+  const fetchMenu = async () => {
+    try {
+      const response = await fetch('/api/menu', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+        credentials: 'same-origin', // Dodaj credentials za bolju kompatibilnost
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to fetch menu:', response.status, response.statusText, errorText);
+        throw new Error(`Failed to fetch menu: ${response.status} ${response.statusText}`);
       }
-    } else {
-      setMenuItems(initialMenu);
-    }
-
-    if (storedCategories) {
-      try {
-        setCategories(JSON.parse(storedCategories));
-      } catch (error) {
-        console.error('Error loading categories:', error);
-        setCategories(initialCategories);
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Invalid response type:', contentType);
+        throw new Error('Invalid response type from server');
       }
-    } else {
-      setCategories(initialCategories);
+      
+      const data = await response.json();
+      setMenuItems(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      console.error('Error fetching menu:', error);
+      console.error('Error details:', error.message, error.stack);
+      setMenuItems([]);
     }
-    
-    setIsLoaded(true);
-  }, []);
-
-  // Sačuvaj meni u localStorage
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(menuItems));
-    }
-  }, [menuItems, isLoaded]);
-
-  // Sačuvaj kategorije u localStorage
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(categories));
-    }
-  }, [categories, isLoaded]);
-
-  // Slušaj promene iz drugih tab-ova
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY_MENU && e.newValue) {
-        try {
-          const newMenu = JSON.parse(e.newValue);
-          setMenuItems(newMenu);
-        } catch (error) {
-          console.error('Error syncing menu:', error);
-        }
-      }
-      if (e.key === STORAGE_KEY_CATEGORIES && e.newValue) {
-        try {
-          const newCategories = JSON.parse(e.newValue);
-          setCategories(newCategories);
-        } catch (error) {
-          console.error('Error syncing categories:', error);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const addMenuItem = (item: Omit<MenuItem, 'id'>) => {
-    const newId = menuItems.length > 0 ? Math.max(...menuItems.map(i => i.id)) + 1 : 1;
-    const newItem: MenuItem = { ...item, id: newId };
-    setMenuItems(prev => [...prev, newItem]);
   };
 
-  const updateMenuItem = (id: number, updates: Partial<MenuItem>) => {
-    setMenuItems(prev => prev.map(item => 
-      item.id === id ? { ...item, ...updates } : item
-    ));
+  // Učitaj kategorije sa API-ja
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to fetch categories:', response.status, response.statusText, errorText);
+        throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Invalid response type:', contentType);
+        throw new Error('Invalid response type from server');
+      }
+      
+      const data = await response.json();
+      setCategories(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      console.error('Error fetching categories:', error);
+      console.error('Error details:', error.message, error.stack);
+      setCategories([]);
+    }
   };
 
-  const deleteMenuItem = (id: number) => {
-    setMenuItems(prev => prev.filter(item => item.id !== id));
+  useEffect(() => {
+    // Učitaj podatke samo ako već nisu učitani
+    if (!isLoaded) {
+      const loadData = async () => {
+        await Promise.all([fetchMenu(), fetchCategories()]);
+        setIsLoaded(true);
+      };
+      loadData();
+    }
+  }, [isLoaded]);
+
+  const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
+    try {
+      const response = await fetch('/api/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      });
+      
+      if (!response.ok) throw new Error('Failed to create menu item');
+      await fetchMenu();
+    } catch (error) {
+      console.error('Error creating menu item:', error);
+      throw error;
+    }
   };
 
-  const addCategory = (category: Omit<Category, 'id'>) => {
-    const newId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1;
-    const newCategory: Category = { ...category, id: newId };
-    setCategories(prev => [...prev, newCategory]);
+  const updateMenuItem = async (id: number, updates: Partial<MenuItem>) => {
+    try {
+      const response = await fetch('/api/menu', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to update menu item');
+      await fetchMenu();
+    } catch (error) {
+      console.error('Error updating menu item:', error);
+      throw error;
+    }
   };
 
-  const deleteCategory = (id: number) => {
-    const categoryToDelete = categories.find(c => c.id === id);
-    if (categoryToDelete) {
-      // Prvo obriši sva jela u toj kategoriji
-      setMenuItems(prev => prev.filter(item => item.category !== categoryToDelete.name));
-      // Zatim obriši kategoriju
-      setCategories(prev => prev.filter(cat => cat.id !== id));
+  const deleteMenuItem = async (id: number) => {
+    try {
+      const response = await fetch(`/api/menu?id=${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete menu item');
+      await fetchMenu();
+    } catch (error) {
+      console.error('Error deleting menu item:', error);
+      throw error;
+    }
+  };
+
+  const addCategory = async (category: Omit<Category, 'id'>) => {
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(category),
+      });
+      
+      if (!response.ok) throw new Error('Failed to create category');
+      await fetchCategories();
+    } catch (error) {
+      console.error('Error creating category:', error);
+      throw error;
+    }
+  };
+
+  const deleteCategory = async (id: number) => {
+    try {
+      const response = await fetch(`/api/categories?id=${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete category');
+      await Promise.all([fetchCategories(), fetchMenu()]);
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      throw error;
     }
   };
 
@@ -160,11 +193,14 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     <MenuContext.Provider value={{ 
       menuItems, 
       categories,
+      isLoaded,
       addMenuItem, 
       updateMenuItem, 
       deleteMenuItem,
       addCategory,
-      deleteCategory
+      deleteCategory,
+      refreshMenu: fetchMenu,
+      refreshCategories: fetchCategories,
     }}>
       {children}
     </MenuContext.Provider>
@@ -177,4 +213,4 @@ export function useMenu() {
     throw new Error('useMenu must be used within a MenuProvider');
   }
   return context;
-} 
+}

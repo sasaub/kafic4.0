@@ -52,7 +52,7 @@ export function formatReceipt(order: {
   // Header
   lines.push(`${ESC}a${1}`); // Centriranje
   lines.push('================================');
-  lines.push('        QR RESTORAN');
+  lines.push('        RACUN');
   lines.push('================================');
   lines.push(`${ESC}a${0}`); // Levo poravnanje
   

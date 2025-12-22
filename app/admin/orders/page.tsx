@@ -4,14 +4,18 @@ import { useState, useEffect } from 'react';
 import { useOrders, Order } from '../../context/OrderContext';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../../components/ToastProvider';
+import Link from 'next/link';
 
 export default function AdminOrdersPage() {
-  const { orders, updateOrderStatus } = useOrders();
+  const { orders, updateOrderStatus, deleteOrder } = useOrders();
   const { user, logout, isLoading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   
-  // HOOKS na vrhu!
+  // HOOKS na vrhu! - SVI hooks moraju biti pre bilo kakvih uslovnih return-ova
   const [filter, setFilter] = useState<string>('Sve');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'admin')) {
@@ -31,13 +35,36 @@ export default function AdminOrdersPage() {
     return null;
   }
 
-  const updateStatus = (id: number, newStatus: Order['status']) => {
-    updateOrderStatus(id, newStatus);
+  const updateStatus = async (id: number, newStatus: Order['status']) => {
+    // Ne dozvoljava menjanje statusa za "Potvrđeno" porudžbine
+    const order = orders.find(o => o.id === id);
+    if (order && order.status === 'Potvrđeno') {
+      showToast('Ne možete menjati status potvrđene porudžbine. Možete je samo obrisati (stornirati) ako je bila greška.', 'warning');
+      return;
+    }
+    await updateOrderStatus(id, newStatus);
   };
 
+  const handleDeleteOrder = async (id: number) => {
+    setShowDeleteConfirm(id);
+  };
+
+  const confirmDelete = async (id: number) => {
+    try {
+      await deleteOrder(id);
+      setShowDeleteConfirm(null);
+      showToast('Porudžbina je uspešno obrisana', 'success');
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      showToast('Greška pri brisanju porudžbine', 'error');
+    }
+  };
+
+  // Prikaži sve porudžbine (i waiter i kitchen) - admin treba da vidi sve
+  const allOrders = orders;
   const filteredOrders = filter === 'Sve' 
-    ? orders 
-    : orders.filter(order => order.status === filter);
+    ? allOrders 
+    : allOrders.filter(order => order.status === filter);
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
@@ -49,7 +76,8 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const statusOptions: Order['status'][] = ['Novo', 'U pripremi', 'Spremno', 'Dostavljeno'];
+  // Uklonjeni 'U pripremi' i 'Dostavljeno' - nema potrebe za tim
+  const statusOptions: Order['status'][] = ['Novo', 'Spremno'];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -61,9 +89,9 @@ export default function AdminOrdersPage() {
             <p className="text-gray-300">Pregled i ažuriranje statusa narudžbi</p>
           </div>
           <div className="flex gap-3">
-            <a href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+            <Link href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
               ← Nazad
-            </a>
+            </Link>
             <button 
               onClick={logout}
               className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
@@ -78,7 +106,7 @@ export default function AdminOrdersPage() {
         {/* Filter */}
         <div className="mb-6 bg-white p-4 rounded-lg shadow-md">
           <div className="flex gap-3 overflow-x-auto">
-            {['Sve', 'Novo', 'U pripremi', 'Spremno', 'Dostavljeno'].map(status => (
+            {['Sve', 'Novo', 'Potvrđeno', 'Spremno'].map(status => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
@@ -95,22 +123,18 @@ export default function AdminOrdersPage() {
         </div>
 
         {/* Statistika */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-blue-500 text-white p-4 rounded-lg">
-            <div className="text-2xl font-bold">{orders.filter(o => o.status === 'Novo').length}</div>
+            <div className="text-2xl font-bold">{allOrders.filter(o => o.status === 'Novo').length}</div>
             <div className="text-sm opacity-90">Nove</div>
           </div>
-          <div className="bg-yellow-500 text-white p-4 rounded-lg">
-            <div className="text-2xl font-bold">{orders.filter(o => o.status === 'U pripremi').length}</div>
-            <div className="text-sm opacity-90">U pripremi</div>
-          </div>
           <div className="bg-green-500 text-white p-4 rounded-lg">
-            <div className="text-2xl font-bold">{orders.filter(o => o.status === 'Spremno').length}</div>
-            <div className="text-sm opacity-90">Spremno</div>
+            <div className="text-2xl font-bold">{allOrders.filter(o => o.status === 'Potvrđeno').length}</div>
+            <div className="text-sm opacity-90">Potvrđeno</div>
           </div>
-          <div className="bg-gray-500 text-white p-4 rounded-lg">
-            <div className="text-2xl font-bold">{orders.filter(o => o.status === 'Dostavljeno').length}</div>
-            <div className="text-sm opacity-90">Dostavljeno</div>
+          <div className="bg-purple-500 text-white p-4 rounded-lg">
+            <div className="text-2xl font-bold">{allOrders.filter(o => o.status === 'Spremno').length}</div>
+            <div className="text-sm opacity-90">Spremno</div>
           </div>
         </div>
 
@@ -149,27 +173,73 @@ export default function AdminOrdersPage() {
                   </ul>
                 </div>
 
-                <div className="flex gap-2 flex-wrap">
-                  {statusOptions.map(status => (
-                    <button
-                      key={status}
-                      onClick={() => updateStatus(order.id, status)}
-                      disabled={order.status === status}
-                      className={`px-4 py-2 rounded-lg transition-colors ${
-                        order.status === status
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-800 text-white hover:bg-gray-700'
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
+                <div className="flex gap-2 flex-wrap items-center">
+                  {order.status === 'Potvrđeno' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="px-4 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">
+                        Potvrđeno - Status se ne može menjati
+                      </span>
+                      <button
+                        onClick={() => handleDeleteOrder(order.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        🗑️ Obriši (Storniraj)
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {statusOptions.map(status => (
+                        <button
+                          key={status}
+                          onClick={() => updateStatus(order.id, status)}
+                          disabled={order.status === status}
+                          className={`px-4 py-2 rounded-lg transition-colors ${
+                            order.status === status
+                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              : 'bg-gray-800 text-white hover:bg-gray-700'
+                          }`}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => handleDeleteOrder(order.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        🗑️ Obriši
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md">
+            <h3 className="text-xl font-bold mb-4">Potvrda brisanja</h3>
+            <p className="mb-6">Da li ste sigurni da želite da obrišete (stornirate) ovu porudžbinu? Ova akcija je nepovratna.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
+                Otkaži
+              </button>
+              <button
+                onClick={() => confirmDelete(showDeleteConfirm)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Obriši
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

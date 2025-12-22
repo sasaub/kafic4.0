@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../../components/ToastProvider';
 import { getPrinterSettings, savePrinterSettings, PrinterSettings } from '../../utils/printer';
 
 export default function PrinterSettingsPage() {
   const { user, logout, isLoading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   
   const [settings, setSettings] = useState<PrinterSettings>({
@@ -44,18 +46,17 @@ export default function PrinterSettingsPage() {
 
   const handleSave = () => {
     if (settings.enabled && !settings.ipAddress) {
-      alert('Unesite IP adresu štampača');
+      showToast('Unesite IP adresu štampača', 'warning');
       return;
     }
 
     savePrinterSettings(settings);
-    setTestResult('Podešavanja su sačuvana!');
-    setTimeout(() => setTestResult(''), 3000);
+    showToast('Podešavanja su sačuvana!', 'success');
   };
 
   const handleTest = async () => {
     if (!settings.ipAddress) {
-      alert('Unesite IP adresu štampača za test');
+      showToast('Unesite IP adresu štampača za test', 'warning');
       return;
     }
 

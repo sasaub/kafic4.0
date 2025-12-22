@@ -4,15 +4,19 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useMenu, Category } from '../../context/MenuContext';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../../components/ToastProvider';
+import Link from 'next/link';
 
 export default function CategoriesPage() {
   const { user, logout, isLoading } = useAuth();
   const { categories, addCategory, deleteCategory } = useMenu();
+  const { showToast } = useToast();
   const router = useRouter();
   
   // HOOKS na vrhu!
   const [showAddForm, setShowAddForm] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: '', type: 'Hrana' as 'Hrana' | 'Piće' });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'admin')) {
@@ -32,26 +36,41 @@ export default function CategoriesPage() {
     return null;
   }
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategory.name) {
-      alert('Unesite naziv kategorije');
+      showToast('Unesite naziv kategorije', 'warning');
       return;
     }
 
     // Proveri da li kategorija već postoji
     if (categories.find(c => c.name.toLowerCase() === newCategory.name.toLowerCase())) {
-      alert('Kategorija sa tim imenom već postoji');
+      showToast('Kategorija sa tim imenom već postoji', 'warning');
       return;
     }
 
-    addCategory(newCategory);
-    setNewCategory({ name: '', type: 'Hrana' });
-    setShowAddForm(false);
+    try {
+      await addCategory(newCategory);
+      setNewCategory({ name: '', type: 'Hrana' });
+      setShowAddForm(false);
+      showToast('Kategorija je uspešno dodata', 'success');
+    } catch (error) {
+      console.error('Error adding category:', error);
+      showToast('Greška pri dodavanju kategorije', 'error');
+    }
   };
 
-  const handleDeleteCategory = (id: number) => {
-    if (confirm('Da li ste sigurni da želite da obrišete ovu kategoriju? Sva jela u ovoj kategoriji će biti obrisana!')) {
-      deleteCategory(id);
+  const handleDeleteCategory = async (id: number) => {
+    setShowDeleteConfirm(id);
+  };
+
+  const confirmDeleteCategory = async (id: number) => {
+    try {
+      await deleteCategory(id);
+      setShowDeleteConfirm(null);
+      showToast('Kategorija je uspešno obrisana', 'success');
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      showToast('Greška pri brisanju kategorije', 'error');
     }
   };
 
@@ -68,9 +87,9 @@ export default function CategoriesPage() {
             <p className="text-gray-300">Dodajte ili obrišite kategorije menija</p>
           </div>
           <div className="flex gap-3">
-            <a href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+            <Link href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
               ← Nazad
-            </a>
+            </Link>
             <button 
               onClick={logout}
               className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
@@ -176,6 +195,30 @@ export default function CategoriesPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md">
+            <h3 className="text-xl font-bold mb-4">Potvrda brisanja</h3>
+            <p className="mb-6">Da li ste sigurni da želite da obrišete ovu kategoriju? Sva jela u ovoj kategoriji će biti obrisana!</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
+                Otkaži
+              </button>
+              <button
+                onClick={() => confirmDeleteCategory(showDeleteConfirm)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Obriši
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

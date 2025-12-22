@@ -4,16 +4,19 @@ import { useState, useEffect } from 'react';
 import { useOrders, Order } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useMenu } from '../context/MenuContext';
 import { formatDate } from '../utils/dateFormat';
 
 export default function KitchenPage() {
   const { orders, updateOrderStatus } = useOrders();
   const { user, logout, isLoading } = useAuth();
+  const { categories } = useMenu();
   const router = useRouter();
   
   // HOOKS na vrhu!
   const [view, setView] = useState<'new' | 'all'>('new');
   const [clearDate, setClearDate] = useState<string | null>(null);
+  const [markedAsReady, setMarkedAsReady] = useState<Set<number>>(new Set());
 
   const CLEAR_KEY = 'qr-kitchen-clear-date';
 
@@ -32,8 +35,28 @@ export default function KitchenPage() {
 
   // Samo nove narudžbine koje su namenjene kuhinji
   const kitchenOrders = orders.filter(o => o.destination === 'kitchen');
-  const newOrders = kitchenOrders.filter(o => o.status === 'Novo');
-  const allOrdersRaw = kitchenOrders.filter(o => o.status !== 'Novo');
+  
+  // Filtriraj stavke - prikaži samo hranu u kuhinji
+  const kitchenOrdersWithFoodOnly = kitchenOrders.map(order => {
+    const foodItems = order.items.filter(item => {
+      const category = categories.find(c => c.name === item.category);
+      return category?.type === 'Hrana';
+    });
+    return {
+      ...order,
+      items: foodItems,
+      total: foodItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    };
+  }).filter(order => order.items.length > 0); // Samo porudžbine sa hranom
+  
+  const newOrders = kitchenOrdersWithFoodOnly.filter(o => 
+    o.status === 'Novo' && !markedAsReady.has(o.id)
+  );
+  // Za "Sve" prikaži sve porudžbine koje nisu "Novo" (uključujući "Potvrđeno")
+  // Takođe, uključi porudžbine koje su označene kao spremno
+  const allOrdersRaw = kitchenOrdersWithFoodOnly.filter(o => 
+    o.status !== 'Novo' || markedAsReady.has(o.id)
+  );
   const allOrders = clearDate
     ? allOrdersRaw.filter(o => o.date > clearDate)
     : allOrdersRaw;
@@ -103,8 +126,12 @@ export default function KitchenPage() {
   }
 
   const acceptOrder = (order: Order) => {
-    // Prvo prihvati (promeni status)
-    updateOrderStatus(order.id, 'Spremno');
+    // Kuhinja može da označi porudžbinu kao spremno, ali ne sme da promeni status
+    // Status ostaje "Potvrđeno" - kuhinja samo potvrđuje da je spremno
+    // Označi porudžbinu kao spremno (dodaj u markedAsReady set)
+    setMarkedAsReady(prev => new Set(prev).add(order.id));
+    // Prebaci na sekciju "Sve" da korisnik vidi da je porudžbina označena
+    setView('all');
   };
 
   const getPriorityBadge = (priority: Order['priority']) => {
@@ -291,7 +318,7 @@ export default function KitchenPage() {
                     ) : (
                       <div className="flex gap-2">
                         <div className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-lg font-bold text-center">
-                          ✓ {order.status}
+                          Potvrđeno
                         </div>
                       </div>
                     )}

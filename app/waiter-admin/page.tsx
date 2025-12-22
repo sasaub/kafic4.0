@@ -6,6 +6,7 @@ import { useOrders, Order } from '../context/OrderContext';
 import { useTables } from '../context/TablesContext';
 import { useMenu, MenuItem } from '../context/MenuContext';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../components/ToastProvider';
 import { printToNetworkPrinter, printViaBrowser, getPrinterSettings } from '../utils/printer';
 
 export default function WaiterAdminPage() {
@@ -77,12 +78,12 @@ export default function WaiterAdminPage() {
 
   const handleCreateOrder = () => {
     if (!selectedTable) {
-      alert('Molimo izaberite sto');
+      showToast('Molimo izaberite sto', 'warning');
       return;
     }
 
     if (selectedItems.length === 0) {
-      alert('Molimo dodajte bar jednu stavku u porudžbinu');
+      showToast('Molimo dodajte bar jednu stavku u porudžbinu', 'warning');
       return;
     }
 
@@ -104,8 +105,8 @@ export default function WaiterAdminPage() {
         } else {
           // Čak i ako je success true, možda štampač nije primio podatke
           // Zbog no-cors mode, ne možemo biti sigurni
-          // Korisnik može ručno da koristi browser print ako treba
-          console.log('Print request sent to network printer');
+          // Uvek otvori browser print odmah kao backup da korisnik vidi račun
+          printViaBrowser(order);
         }
       } catch (error) {
         console.error('Error in print process:', error);
@@ -133,14 +134,33 @@ export default function WaiterAdminPage() {
       total: getTotalPrice()
     };
 
-    addOrder(newOrder);
-
-    // Reset forme
-    setSelectedTable('');
-    setSelectedItems([]);
-    setShowConfirmDialog(false);
-    
-    // Porudžbina je kreirana, nema alert obaveštenja
+    try {
+      await addOrder(newOrder);
+      
+      // Reset forme
+      setSelectedTable('');
+      setSelectedItems([]);
+      setShowConfirmDialog(false);
+      
+      // Automatski štampaj ako je podešeno
+      const printerSettings = getPrinterSettings();
+      if (printerSettings && printerSettings.enabled && printerSettings.ipAddress) {
+        // Sačekaj malo da se porudžbina kreira u bazi
+        setTimeout(async () => {
+          // Uzmi najnoviju porudžbinu
+          const ordersResponse = await fetch('/api/orders?status=Novo');
+          const orders = await ordersResponse.json();
+          const latestOrder = orders.find((o: any) => o.table === selectedTable);
+          
+          if (latestOrder) {
+            await handlePrintOrder(latestOrder);
+          }
+        }, 500);
+      }
+      } catch (error) {
+        console.error('Error creating order:', error);
+        showToast('Greška pri kreiranju porudžbine', 'error');
+      }
   };
 
   const foodCategories = categories.filter(c => c.type === 'Hrana');
@@ -201,7 +221,20 @@ export default function WaiterAdminPage() {
                         🖨️ Štampaj
                       </button>
                       <button
-                        onClick={() => confirmOrder(order.id)}
+                        onClick={async () => {
+                          try {
+                            // Otvori print dialog odmah, pre potvrđivanja
+                            handlePrintOrder(order);
+                            // Potvrdi porudžbinu u pozadini
+                            confirmOrder(order.id).catch((error: any) => {
+                              console.error('Error confirming order:', error);
+                              showToast(`Greška pri potvrđivanju porudžbine: ${error.message || 'Nepoznata greška'}`, 'error');
+                            });
+                          } catch (error: any) {
+                            console.error('Error:', error);
+                            showToast(`Greška: ${error.message || 'Nepoznata greška'}`, 'error');
+                          }
+                        }}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm md:text-base"
                       >
                         ✓ Potvrdi

@@ -6,6 +6,7 @@ import { useOrders } from '../context/OrderContext';
 import { useMenu } from '../context/MenuContext';
 import { useTables } from '../context/TablesContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AdminPage() {
   const { user, logout, isLoading } = useAuth();
@@ -20,6 +21,12 @@ export default function AdminPage() {
     }
   }, [user, router, isLoading]);
 
+  // Debug log
+  useEffect(() => {
+    console.log('Admin page - orders:', orders);
+    console.log('Admin page - orders count:', orders.length);
+  }, [orders]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -32,29 +39,99 @@ export default function AdminPage() {
     return null;
   }
 
-  // Realne statistike
+  // Realne statistike - samo originalne porudžbine (waiter), ne kuhinjske duplikate
   const today = new Date().toISOString().split('T')[0];
-  const todayOrders = orders.filter(o => o.date === today);
-  const activeOrders = todayOrders.filter(o => o.status !== 'Dostavljeno');
-  const deliveredToday = todayOrders.filter(o => o.status === 'Dostavljeno');
-  const totalRevenueToday = deliveredToday.reduce((sum, o) => sum + o.total, 0);
+  
+  // Debug
+  console.log('Admin page - All orders:', orders);
+  console.log('Admin page - Today date:', today);
+  
+  // Filtriraj porudžbine za danas - samo "Potvrđeno" (samo konobar i konobar-admin potvrđuju)
+  // Prikaži samo waiter porudžbine (originalne), ne kuhinjske duplikate
+  console.log('=== ADMIN PAGE FILTERING ===');
+  console.log('All orders:', orders.length);
+  console.log('Today date:', today);
+  
+        // Za prikaz poslednjih porudžbina - prikaži sve porudžbine sa statusom "Potvrđeno" za danas
+        // (nebitno da li je waiter ili waiter-admin potvrdio)
+        const todayOrdersRaw = orders.filter(o => {
+          console.log(`Order ${o.id}: date=${o.date}, destination=${o.destination || 'undefined'}, status=${o.status}`);
+          const dateMatch = o.date === today;
+          const statusMatch = o.status === 'Potvrđeno';
+          const matches = dateMatch && statusMatch;
+          if (matches) {
+            console.log('  → ✓ INCLUDED (for display)');
+          } else {
+            console.log(`  → Filtered out: dateMatch=${dateMatch}, statusMatch=${statusMatch}`);
+          }
+          return matches;
+        });
+        
+        // Grupisi po ID-u da ne dupliramo (ako postoji kopija porudžbine)
+        const todayOrdersMap = new Map();
+        todayOrdersRaw.forEach(order => {
+          if (!todayOrdersMap.has(order.id)) {
+            todayOrdersMap.set(order.id, order);
+          }
+        });
+        const todayOrders = Array.from(todayOrdersMap.values());
+  
+  console.log('Today orders (waiter, Potvrđeno, for display):', todayOrders.length);
+  
+  // Za statistike - sve porudžbine sa statusom "Potvrđeno" za danas
+  // (nebitno da li je waiter ili waiter-admin potvrdio)
+  const allTodayOrdersRaw = orders.filter(o => o.date === today && o.status === 'Potvrđeno');
+  console.log('All today orders (Potvrđeno, for stats):', allTodayOrdersRaw.length);
+  
+  // Grupisi po ID-u da izbegnemo duplikate (ako postoji kopija porudžbine)
+  const uniqueTodayOrders = allTodayOrdersRaw.reduce((acc, order) => {
+    if (!acc[order.id]) {
+      acc[order.id] = order;
+    }
+    return acc;
+  }, {} as Record<number, typeof allTodayOrdersRaw[0]>);
+  
+  const uniqueTodayOrdersArray = Object.values(uniqueTodayOrders);
+  console.log('Unique today orders (Potvrđeno, for stats):', uniqueTodayOrdersArray.length);
+  
+  // Aktivne narudžbe = sve porudžbine koje NEMAJU status "Potvrđeno" (naručene ali još nisu potvrđene)
+  const activeOrders = orders.filter(o => o.date === today && o.status !== 'Potvrđeno');
+  
+  // Ukupno dostavljeno = sve porudžbine sa statusom "Potvrđeno" za danas
+  const deliveredToday = uniqueTodayOrdersArray;
+  
+  // Ukupna zarada = suma svih porudžbina sa statusom "Potvrđeno" za danas
+  const totalRevenueToday = uniqueTodayOrdersArray.reduce((sum, o) => sum + o.total, 0);
 
   const stats = [
     { title: 'Aktivne narudžbe', value: activeOrders.length.toString(), color: 'bg-blue-500' },
     { title: 'Zarada danas', value: `${totalRevenueToday.toLocaleString()} RSD`, color: 'bg-green-500' },
     { title: 'Dostavljeno danas', value: deliveredToday.length.toString(), color: 'bg-purple-500' },
-    { title: 'Ukupno narudžbi danas', value: todayOrders.length.toString(), color: 'bg-orange-500' },
+    { title: 'Ukupno narudžbi danas', value: uniqueTodayOrdersArray.length.toString(), color: 'bg-orange-500' },
   ];
 
-  // Poslednje narudžbine
-  const recentOrders = todayOrders.slice(0, 5).map(order => ({
-    id: order.id,
-    table: order.table,
-    items: order.items.map(item => `${item.name} x${item.quantity}`).join(', '),
-    total: order.total,
-    status: order.status,
-    time: order.time
-  }));
+  // Poslednje narudžbine - prikaži sve danas, ne samo prvih 5
+  const recentOrders = todayOrders
+    .sort((a, b) => {
+      // Sortiraj po vremenu (najnovije prvo)
+      const timeA = a.time.split(':').map(Number);
+      const timeB = b.time.split(':').map(Number);
+      if (timeA[0] !== timeB[0]) return timeB[0] - timeA[0];
+      return timeB[1] - timeA[1];
+    })
+    .slice(0, 10)
+    .map(order => ({
+      id: order.id,
+      table: order.table,
+      items: order.items && order.items.length > 0 
+        ? order.items.map(item => `${item.name} x${item.quantity}`).join(', ')
+        : 'Nema stavki',
+      total: order.total,
+      status: order.status,
+      time: order.time
+    }));
+  
+  console.log('Recent orders:', recentOrders);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -99,50 +176,50 @@ export default function AdminPage() {
 
         {/* Brzi pristup */}
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <a
+          <Link
             href="/admin/menu"
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow"
           >
             <div className="text-4xl mb-3">🍽️</div>
             <h3 className="text-xl font-bold mb-2">Meni</h3>
             <p className="text-gray-600">Jela i pića</p>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/admin/categories"
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow"
           >
             <div className="text-4xl mb-3">📑</div>
             <h3 className="text-xl font-bold mb-2">Kategorije</h3>
             <p className="text-gray-600">Sekcije menija</p>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/admin/orders"
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow"
           >
             <div className="text-4xl mb-3">📋</div>
             <h3 className="text-xl font-bold mb-2">Narudžbe</h3>
             <p className="text-gray-600">Sve narudžbine</p>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/admin/revenue"
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow"
           >
             <div className="text-4xl mb-3">💰</div>
             <h3 className="text-xl font-bold mb-2">Pazar</h3>
             <p className="text-gray-600">Zarada</p>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/admin/tables"
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow"
           >
             <div className="text-4xl mb-3">🪑</div>
             <h3 className="text-xl font-bold mb-2">Stolovi</h3>
             <p className="text-gray-600">QR kodovi</p>
-          </a>
+          </Link>
         </div>
 
         {/* Poslednje narudžbe */}

@@ -5,12 +5,15 @@ import { useAuth } from '../../../context/AuthContext';
 import { useTables, MonthlyPayment } from '../../../context/TablesContext';
 import { useOrders, Order } from '../../../context/OrderContext';
 import { useRouter, useParams } from 'next/navigation';
+import { useToast } from '../../../components/ToastProvider';
+import Link from 'next/link';
 import { formatDateTime } from '../../../utils/dateFormat';
 
 export default function MonthlyTableDetailPage() {
   const { user, logout, isLoading } = useAuth();
   const { tables, addMonthlyPayment } = useTables();
   const { orders } = useOrders();
+  const { showToast } = useToast();
   const router = useRouter();
   const params = useParams();
   const tableId = parseInt(params.id as string);
@@ -44,9 +47,9 @@ export default function MonthlyTableDetailPage() {
         <div className="text-center">
           <div className="text-6xl mb-4">❌</div>
           <p className="text-xl font-semibold mb-2">Sto nije pronađen</p>
-          <a href="/waiter-admin/monthly-tables" className="text-blue-600 hover:underline">
+          <Link href="/waiter-admin/monthly-tables" className="text-blue-600 hover:underline">
             ← Nazad na mesečne stolove
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -79,10 +82,10 @@ export default function MonthlyTableDetailPage() {
   // Ostatak (duguje)
   const remaining = totalOrdersAmount - totalPayments;
 
-  const handleAddPayment = () => {
+  const handleAddPayment = async () => {
     const amount = parseFloat(newPayment.amount);
     if (!amount || amount <= 0) {
-      alert('Unesite validan iznos');
+      showToast('Unesite validan iznos', 'warning');
       return;
     }
 
@@ -90,15 +93,21 @@ export default function MonthlyTableDetailPage() {
     const date = now.toISOString().split('T')[0];
     const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    addMonthlyPayment(tableId, {
-      amount,
-      date,
-      time,
-      note: newPayment.note.trim() || undefined
-    });
+    try {
+      await addMonthlyPayment(tableId, {
+        amount,
+        date,
+        time,
+        note: newPayment.note.trim() || undefined
+      });
 
-    setNewPayment({ amount: '', note: '' });
-    setShowPaymentForm(false);
+      setNewPayment({ amount: '', note: '' });
+      setShowPaymentForm(false);
+      showToast('Uplata je uspešno dodata', 'success');
+    } catch (error) {
+      console.error('Error adding payment:', error);
+      showToast('Greška pri dodavanju uplate', 'error');
+    }
   };
 
   return (
@@ -113,12 +122,12 @@ export default function MonthlyTableDetailPage() {
             </p>
           </div>
           <div className="flex gap-3 w-full md:w-auto">
-            <a 
+            <Link 
               href="/waiter-admin/monthly-tables"
               className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors text-sm md:text-base"
             >
               ← Nazad
-            </a>
+            </Link>
             <button 
               onClick={logout}
               className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors text-sm md:text-base"

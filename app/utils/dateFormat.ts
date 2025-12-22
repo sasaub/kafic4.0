@@ -1,5 +1,6 @@
 /**
  * Formatira datum iz YYYY-MM-DD formata u DD.MM.YYYY format
+ * Takođe podržava ISO string sa vremenom (2025-12-10T23:00:00.000Z)
  */
 export function formatDate(dateString: string): string {
   if (!dateString) return '';
@@ -7,6 +8,11 @@ export function formatDate(dateString: string): string {
   // Ako je već u formatu DD.MM.YYYY, vrati ga
   if (dateString.includes('.')) {
     return dateString;
+  }
+  
+  // Ako je ISO string sa vremenom, uzmi samo datum deo
+  if (dateString.includes('T')) {
+    dateString = dateString.split('T')[0];
   }
   
   // Parsiraj YYYY-MM-DD format

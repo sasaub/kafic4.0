@@ -11,25 +11,33 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const success = login(username, password);
-    
-    if (success) {
-      // Redirektuj na osnovu korisničkog imena
-      if (username === 'admin') {
-        router.push('/admin');
-      } else if (username === 'konobaradmin') {
-        router.push('/waiter-admin');
-      } else if (username === 'kuhinja') {
-        router.push('/kitchen');
+    try {
+      const success = await login(username, password);
+      
+      if (success) {
+        // Sačekaj malo da se state ažurira
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Redirektuj na osnovu korisničkog imena
+        if (username === 'admin') {
+          router.push('/admin');
+        } else if (username === 'konobaradmin') {
+          router.push('/waiter-admin');
+        } else if (username === 'kuhinja') {
+          router.push('/kitchen');
+        } else {
+          router.push('/waiter');
+        }
       } else {
-        router.push('/waiter');
+        setError('Pogrešno korisničko ime ili lozinka');
       }
-    } else {
-      setError('Pogrešno korisničko ime ili lozinka');
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Greška pri prijavljivanju. Pokušajte ponovo.');
     }
   };
 
@@ -84,15 +92,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 font-semibold mb-2">Demo nalozi:</p>
-          <div className="space-y-1 text-sm text-gray-700">
-            <p>👨‍💼 Admin: <code className="bg-gray-200 px-2 py-1 rounded">admin</code> / <code className="bg-gray-200 px-2 py-1 rounded">admin123</code></p>
-            <p>👨‍🍳 Konobar: <code className="bg-gray-200 px-2 py-1 rounded">konobar</code> / <code className="bg-gray-200 px-2 py-1 rounded">konobar123</code></p>
-            <p>👔 Konobar Admin: <code className="bg-gray-200 px-2 py-1 rounded">konobaradmin</code> / <code className="bg-gray-200 px-2 py-1 rounded">konobaradmin123</code></p>
-            <p>👨‍🍳 Kuhinja: <code className="bg-gray-200 px-2 py-1 rounded">kuhinja</code> / <code className="bg-gray-200 px-2 py-1 rounded">kuhinja123</code></p>
-          </div>
-        </div>
 
         <div className="mt-6 text-center">
           <a href="/" className="text-orange-600 hover:text-orange-700 font-semibold">

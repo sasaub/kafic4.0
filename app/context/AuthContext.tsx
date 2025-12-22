@@ -3,13 +3,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
+  id: number;
   username: string;
   role: 'admin' | 'waiter' | 'waiter-admin' | 'kitchen';
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -19,42 +20,96 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'qr-restaurant-user';
 
-// Hardcoded korisnici (u produkciji bi ovo bilo u bazi)
-const users = [
-  { username: 'admin', password: 'admin123', role: 'admin' as const },
-  { username: 'konobar', password: 'konobar123', role: 'waiter' as const },
-  { username: 'konobaradmin', password: 'konobaradmin123', role: 'waiter-admin' as const },
-  { username: 'kuhinja', password: 'kuhinja123', role: 'kitchen' as const },
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch (error) {
-        console.error('Error loading user:', error);
+    const loadUser = () => {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          const userData = JSON.parse(stored);
+          // Proveri da li user data ima sve potrebne polja
+          if (userData && userData.id && userData.username && userData.role) {
+            setUser(userData);
+          } else {
+            // Ako nema sve potrebne polja, obriši
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        } catch (error) {
+          console.error('Error loading user:', error);
+          localStorage.removeItem(STORAGE_KEY);
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+    
+    loadUser();
+    
+    // Slušaj promene u localStorage (iz drugih tab-ova)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) {
+        if (e.newValue) {
+          try {
+            const userData = JSON.parse(e.newValue);
+            if (userData && userData.id && userData.username && userData.role) {
+              setUser(userData);
+            }
+          } catch (error) {
+            console.error('Error parsing user from storage:', error);
+          }
+        } else {
+          setUser(null);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const login = (username: string, password: string): boolean => {
-    const foundUser = users.find(
-      u => u.username === username && u.password === password
-    );
-    
-    if (foundUser) {
-      const userData = { username: foundUser.username, role: foundUser.role };
+  const login = async (username: string, password: string): Promise<boolean> => {
+    try {
+      console.log('AuthContext: Attempting login for:', username);
+      
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      
+      console.log('AuthContext: Login response status:', response.status);
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        console.error('AuthContext: Login failed:', errorData);
+        return false;
+      }
+      
+      const userData = await response.json();
+      console.log('AuthContext: Login successful, user data:', userData);
+      
+      // Proveri da li userData ima sve potrebne polja
+      if (!userData || !userData.id || !userData.username || !userData.role) {
+        console.error('AuthContext: Invalid user data received:', userData);
+        return false;
+      }
+      
       setUser(userData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       return true;
+    } catch (error: any) {
+      console.error('AuthContext: Error during login:', error);
+      console.error('AuthContext: Error message:', error?.message);
+      console.error('AuthContext: Error stack:', error?.stack);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
@@ -81,4 +136,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}
