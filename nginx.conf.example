@@ -1,0 +1,77 @@
+# Nginx Configuration Example
+# Kopiraj ovaj fajl u /etc/nginx/sites-available/qr-restaurant
+# Zatim kreiraj symlink: ln -s /etc/nginx/sites-available/qr-restaurant /etc/nginx/sites-enabled/
+# Testiraj: nginx -t
+# Restart: systemctl restart nginx
+
+server {
+    listen 80;
+    server_name tvoj-domen.local;  # Promeni na tvoj domen ili IP
+
+    # Logovi
+    access_log /var/log/nginx/qr-restaurant-access.log;
+    error_log /var/log/nginx/qr-restaurant-error.log;
+
+    # Maksimalna veličina upload-a
+    client_max_body_size 10M;
+
+    # Timeout-ovi
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        
+        # WebSocket support (ako bude potrebno)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        
+        # Standardni proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Cache bypass
+        proxy_cache_bypass $http_upgrade;
+        
+        # Buffering
+        proxy_buffering off;
+    }
+
+    # Cache statičkih fajlova (opciono)
+    location /_next/static/ {
+        proxy_pass http://localhost:3000;
+        proxy_cache_valid 200 60m;
+        add_header Cache-Control "public, immutable";
+    }
+}
+
+# HTTPS konfiguracija (ako koristiš Let's Encrypt)
+# server {
+#     listen 443 ssl http2;
+#     server_name tvoj-domen.local;
+# 
+#     ssl_certificate /etc/letsencrypt/live/tvoj-domen/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/tvoj-domen/privkey.pem;
+# 
+#     # SSL optimizacije
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     ssl_ciphers HIGH:!aNULL:!MD5;
+#     ssl_prefer_server_ciphers on;
+# 
+#     # Ista konfiguracija kao gore
+#     location / {
+#         proxy_pass http://localhost:3000;
+#         # ... (ista konfiguracija kao gore)
+#     }
+# }
+# 
+# # Redirect HTTP to HTTPS
+# server {
+#     listen 80;
+#     server_name tvoj-domen.local;
+#     return 301 https://$server_name$request_uri;
+# }

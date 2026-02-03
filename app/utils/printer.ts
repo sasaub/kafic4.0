@@ -6,31 +6,67 @@ export interface PrinterSettings {
   enabled: boolean;
 }
 
-const STORAGE_KEY = 'qr-restaurant-printer-settings';
+// Funkcije za učitavanje i čuvanje podešavanja iz baze preko API-ja
 
-export function getPrinterSettings(): PrinterSettings | null {
+export async function getPrinterSettings(): Promise<PrinterSettings | null> {
   if (typeof window === 'undefined') return null;
   
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
+    const response = await fetch('/api/printer-settings');
+    if (!response.ok) {
+      console.error('Error loading printer settings from API');
+      return null;
     }
+    const data = await response.json();
+    return {
+      ipAddress: data.ipAddress || '',
+      port: data.port || 9100,
+      enabled: data.enabled || false,
+    };
   } catch (error) {
     console.error('Error loading printer settings:', error);
+    return null;
   }
-  
-  return null;
 }
 
-export function savePrinterSettings(settings: PrinterSettings): void {
-  if (typeof window === 'undefined') return;
+export async function savePrinterSettings(settings: PrinterSettings): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
   
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    const response = await fetch('/api/printer-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    
+    if (!response.ok) {
+      console.error('Error saving printer settings to API');
+      return false;
+    }
+    
+    return true;
   } catch (error) {
     console.error('Error saving printer settings:', error);
+    return false;
   }
+}
+
+// Synchronous wrapper za backward compatibility (koristi cache)
+let cachedSettings: PrinterSettings | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5000; // 5 sekundi cache
+
+export function getPrinterSettingsSync(): PrinterSettings | null {
+  // Ako je cache star, vrati null (neće raditi sync, ali će se koristiti async verzija)
+  if (Date.now() - lastFetchTime > CACHE_DURATION) {
+    return null;
+  }
+  return cachedSettings;
+}
+
+export function setCachedPrinterSettings(settings: PrinterSettings | null) {
+  cachedSettings = settings;
+  lastFetchTime = Date.now();
 }
 
 // ESC/POS komande za formatiranje
@@ -52,7 +88,7 @@ export function formatReceipt(order: {
   // Header
   lines.push(`${ESC}a${1}`); // Centriranje
   lines.push('================================');
-  lines.push('        RACUN');
+  lines.push('Ovo nije fiskalni isecak');
   lines.push('================================');
   lines.push(`${ESC}a${0}`); // Levo poravnanje
   
@@ -68,9 +104,8 @@ export function formatReceipt(order: {
   
   // Stavke
   order.items.forEach(item => {
-    const itemTotal = item.quantity * item.price;
     lines.push(item.name);
-    lines.push(`${item.quantity} x ${item.price} RSD = ${itemTotal} RSD`);
+    lines.push(`${item.quantity} x ${item.price} RSD = ${item.quantity * item.price} RSD`);
     lines.push('');
   });
   
@@ -79,8 +114,16 @@ export function formatReceipt(order: {
   lines.push(`UKUPNO:                    ${order.total} RSD`);
   lines.push('');
   lines.push('================================');
-  lines.push('     Hvala na poverenju!');
+  lines.push('');
+  lines.push(`${ESC}a${1}`); // Centriranje
+  lines.push('  ╔═══════════╗');
+  lines.push('  ║   🍽️   ║');
+  lines.push('  ║ RESTORAN  ║');
+  lines.push('  ╚═══════════╝');
+  lines.push('');
+  lines.push('Hvala na poverenju!');
   lines.push('================================');
+  lines.push(`${ESC}a${0}`); // Levo poravnanje
   lines.push('');
   lines.push('');
   lines.push('');
@@ -104,7 +147,7 @@ export async function printToNetworkPrinter(
     total: number;
   }
 ): Promise<boolean> {
-  const settings = getPrinterSettings();
+  const settings = await getPrinterSettings();
   
   if (!settings || !settings.enabled || !settings.ipAddress) {
     console.error('Printer settings not configured');
@@ -158,7 +201,7 @@ export function printViaBrowser(order: {
 }): void {
   const receiptContent = `
 ========================================
-            QR RESTORAN
+        Ovo nije fiskalni isecak
 ========================================
 
 Narudžba #${order.id}
@@ -177,7 +220,12 @@ ${item.quantity} x ${item.price} RSD = ${item.quantity * item.price} RSD
 UKUPNO:                    ${order.total} RSD
 
 ========================================
-         Hvala na poverenju!
+        ╔═══════════╗
+        ║   🍽️   ║
+        ║ RESTORAN  ║
+        ╚═══════════╝
+
+      Hvala na poverenju!
 ========================================
   `;
 
@@ -185,6 +233,7 @@ UKUPNO:                    ${order.total} RSD
   if (printWindow) {
     printWindow.document.write('<html><head><title>Račun #' + order.id + '</title>');
     printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: 80mm auto; margin: 0; }');
     printWindow.document.write('body { font-family: monospace; padding: 20px; }');
     printWindow.document.write('pre { white-space: pre-wrap; }');
     printWindow.document.write('@media print { body { margin: 0; } }');

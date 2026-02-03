@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useMenu, Category } from '../../context/MenuContext';
+import { useMenu } from '../../context/MenuContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../../components/ToastProvider';
 import Link from 'next/link';
@@ -78,21 +78,27 @@ export default function CategoriesPage() {
   const drinkCategories = categories.filter(c => c.type === 'Piće');
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA' }}>
       {/* Header */}
-      <div className="bg-gray-800 text-white p-6">
+      <div className="p-6" style={{ backgroundColor: '#2B2E34' }}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Upravljanje Kategorijama</h1>
-            <p className="text-gray-300">Dodajte ili obrišite kategorije menija</p>
+            <h1 className="text-3xl font-bold" style={{ color: '#FFFFFF' }}>Upravljanje Kategorijama</h1>
+            <p className="mt-2" style={{ color: '#FFFFFF', opacity: 0.8 }}>Dodajte ili obrišite kategorije menija</p>
           </div>
           <div className="flex gap-3">
-            <Link href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
-              ← Nazad
+            <Link href="/admin" className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Nazad
             </Link>
             <button 
               onClick={logout}
-              className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
             >
               Odjavi se
             </button>
@@ -105,7 +111,10 @@ export default function CategoriesPage() {
         <div className="mb-6">
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+            className="px-6 py-3 text-white rounded-lg font-semibold transition-colors"
+            style={{ backgroundColor: '#4CAF50' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#45a049'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4CAF50'}
           >
             + Dodaj novu kategoriju
           </button>
@@ -122,7 +131,15 @@ export default function CategoriesPage() {
                   type="text"
                   value={newCategory.name}
                   onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition-colors"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#4CAF50';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#D1D5DB';
+                    e.target.style.boxShadow = 'none';
+                  }}
                   placeholder="Npr. Pizza, Pasta, Vina..."
                 />
               </div>
@@ -131,7 +148,15 @@ export default function CategoriesPage() {
                 <select
                   value={newCategory.type}
                   onChange={(e) => setNewCategory({...newCategory, type: e.target.value as 'Hrana' | 'Piće'})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition-colors"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#4CAF50';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#D1D5DB';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 >
                   <option value="Hrana">Hrana</option>
                   <option value="Piće">Piće</option>
@@ -141,7 +166,10 @@ export default function CategoriesPage() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleAddCategory}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="px-6 py-2 text-white rounded-lg transition-colors"
+                style={{ backgroundColor: '#4CAF50' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#45a049'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4CAF50'}
               >
                 Sačuvaj
               </button>
@@ -157,7 +185,7 @@ export default function CategoriesPage() {
 
         {/* Kategorije Hrana */}
         <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-4">🍽️ Hrana</h2>
+          <h2 className="text-2xl font-bold mb-4">Hrana</h2>
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
             {foodCategories.map(category => (
               <div key={category.id} className="bg-white p-4 rounded-lg shadow-md">
@@ -165,9 +193,11 @@ export default function CategoriesPage() {
                   <h3 className="font-bold text-lg">{category.name}</h3>
                   <button
                     onClick={() => handleDeleteCategory(category.id)}
-                    className="text-red-600 hover:text-red-800 font-bold"
+                    className="text-gray-500 hover:text-gray-700 font-bold px-2 transition-colors"
                   >
-                    ✕
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -177,7 +207,7 @@ export default function CategoriesPage() {
 
         {/* Kategorije Piće */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">🥤 Piće</h2>
+          <h2 className="text-2xl font-bold mb-4">Piće</h2>
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
             {drinkCategories.map(category => (
               <div key={category.id} className="bg-white p-4 rounded-lg shadow-md">
@@ -185,9 +215,11 @@ export default function CategoriesPage() {
                   <h3 className="font-bold text-lg">{category.name}</h3>
                   <button
                     onClick={() => handleDeleteCategory(category.id)}
-                    className="text-red-600 hover:text-red-800 font-bold"
+                    className="text-gray-500 hover:text-gray-700 font-bold px-2 transition-colors"
                   >
-                    ✕
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -211,7 +243,10 @@ export default function CategoriesPage() {
               </button>
               <button
                 onClick={() => confirmDeleteCategory(showDeleteConfirm)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="px-4 py-2 text-white rounded-lg transition-colors"
+                style={{ backgroundColor: '#EF4444' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
               >
                 Obriši
               </button>

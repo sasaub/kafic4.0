@@ -34,7 +34,6 @@ const TablesContext = createContext<TablesContextType | undefined>(undefined);
 
 export function TablesProvider({ children }: { children: ReactNode }) {
   const [tables, setTables] = useState<Table[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   // Učitaj stolove sa API-ja
   const fetchTables = async () => {
@@ -63,7 +62,18 @@ export function TablesProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       
       // Mapiraj podatke iz baze na Table format
-      const mappedTables = data.map((table: any) => ({
+      interface TableData {
+        id: number;
+        number: number | string;
+        capacity: number;
+        status: string;
+        qr_code: string;
+        monthlyPayment?: boolean;
+        monthly_payment?: number;
+        monthlyPayments?: Array<{ id: number; amount: number; date: string; time: string; note: string | null }>;
+      }
+      
+      const mappedTables = (data as TableData[]).map((table: TableData) => ({
         id: table.id,
         number: String(table.number),
         capacity: table.capacity,
@@ -78,7 +88,7 @@ export function TablesProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching tables:', error);
       setTables([]);
     } finally {
-      setIsLoaded(true);
+      // Tables loaded
     }
   };
 

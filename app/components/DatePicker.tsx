@@ -15,7 +15,6 @@ interface DatePickerProps {
  */
 export default function DatePicker({ value, onChange, label, className = '' }: DatePickerProps) {
   const [displayValue, setDisplayValue] = useState('');
-  const [showCalendar, setShowCalendar] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 

@@ -8,6 +8,7 @@ import { useMenu, MenuItem } from '../context/MenuContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../components/ToastProvider';
 import { printToNetworkPrinter, printViaBrowser, getPrinterSettings } from '../utils/printer';
+import Link from 'next/link';
 
 export default function WaiterAdminPage() {
   const { user, logout, isLoading } = useAuth();
@@ -15,6 +16,7 @@ export default function WaiterAdminPage() {
   const { tables } = useTables();
   const { menuItems, categories } = useMenu();
   const router = useRouter();
+  const { showToast } = useToast();
   
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [selectedItems, setSelectedItems] = useState<{ item: MenuItem; quantity: number; comment?: string }[]>([]);
@@ -92,7 +94,7 @@ export default function WaiterAdminPage() {
   };
 
   const handlePrintOrder = async (order: Order) => {
-    const printerSettings = getPrinterSettings();
+    const printerSettings = await getPrinterSettings();
     
     if (printerSettings && printerSettings.enabled && printerSettings.ipAddress) {
       try {
@@ -143,14 +145,14 @@ export default function WaiterAdminPage() {
       setShowConfirmDialog(false);
       
       // Automatski štampaj ako je podešeno
-      const printerSettings = getPrinterSettings();
+      const printerSettings = await getPrinterSettings();
       if (printerSettings && printerSettings.enabled && printerSettings.ipAddress) {
         // Sačekaj malo da se porudžbina kreira u bazi
         setTimeout(async () => {
           // Uzmi najnoviju porudžbinu
           const ordersResponse = await fetch('/api/orders?status=Novo');
-          const orders = await ordersResponse.json();
-          const latestOrder = orders.find((o: any) => o.table === selectedTable);
+          const orders = await ordersResponse.json() as Order[];
+          const latestOrder = orders.find((o: Order) => o.table === selectedTable);
           
           if (latestOrder) {
             await handlePrintOrder(latestOrder);
@@ -167,30 +169,45 @@ export default function WaiterAdminPage() {
   const drinkCategories = categories.filter(c => c.type === 'Piće');
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA' }}>
       {/* Header */}
-      <div className="bg-gray-800 text-white p-4 md:p-6">
+      <div className="p-4 md:p-6" style={{ backgroundColor: '#2B2E34' }}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold">👔 Konobar Admin</h1>
-            <p className="text-gray-300 text-sm md:text-base">Dobrodošli, {user.username}</p>
+            <h1 className="text-xl md:text-3xl font-bold" style={{ color: '#FFFFFF' }}>Konobar Admin</h1>
+            <p className="text-sm md:text-base mt-2" style={{ color: '#FFFFFF', opacity: 0.8 }}>Dobrodošli, {user.username}</p>
           </div>
           <div className="flex gap-3">
             <a
               href="/waiter-admin/printer-settings"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
+              className="px-4 py-2 rounded-lg transition-colors text-sm md:text-base flex items-center gap-2"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
             >
-              🖨️ Podešavanja Štampača
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Podešavanja Štampača
             </a>
-            <a
+            <Link
               href="/waiter-admin/monthly-tables"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base"
+              className="px-4 py-2 rounded-lg transition-colors text-sm md:text-base flex items-center gap-2"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
             >
-              📅 Mesečni Stolovi
-            </a>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Mesečni Stolovi
+            </Link>
             <button 
               onClick={logout}
-              className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors text-sm md:text-base"
+              className="px-4 py-2 rounded-lg transition-colors text-sm md:text-base"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
             >
               Odjavi se
             </button>
@@ -201,11 +218,11 @@ export default function WaiterAdminPage() {
       <div className="max-w-7xl mx-auto p-3 md:p-6">
         {/* Sekcija za potvrdu porudžbina */}
         {orders.filter(o => o.status === 'Novo' && o.destination === 'waiter').length > 0 && (
-          <div className="bg-red-50 border-2 border-red-200 p-4 md:p-6 rounded-lg shadow-md mb-4 md:mb-6">
-            <h2 className="text-xl md:text-2xl font-bold mb-4 text-red-800">🔔 Pristigle porudžbine za potvrdu</h2>
+          <div className="p-4 md:p-6 rounded-lg shadow-md mb-4 md:mb-6" style={{ backgroundColor: '#2B2E34', border: '2px solid #2B2E34' }}>
+            <h2 className="text-xl md:text-2xl font-bold mb-4" style={{ color: '#FFFFFF' }}>Pristigle porudžbine za potvrdu</h2>
             <div className="space-y-3">
               {orders.filter(o => o.status === 'Novo' && o.destination === 'waiter').map(order => (
-                <div key={order.id} className="bg-white p-4 rounded-lg border border-red-200">
+                  <div key={order.id} className="bg-white p-4 rounded-lg border" style={{ borderColor: '#2B2E34' }}>
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h3 className="font-bold text-lg text-gray-800">{order.table}</h3>
@@ -215,10 +232,16 @@ export default function WaiterAdminPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handlePrintOrder(order)}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm md:text-base"
+                        className="px-4 py-2 text-white rounded-lg font-semibold transition-colors text-sm md:text-base flex items-center gap-2"
+                        style={{ backgroundColor: '#1F7A5A', color: '#FFFFFF' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1a6b4f'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1F7A5A'}
                         title="Štampaj porudžbinu"
                       >
-                        🖨️ Štampaj
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Štampaj
                       </button>
                       <button
                         onClick={async () => {
@@ -226,18 +249,23 @@ export default function WaiterAdminPage() {
                             // Otvori print dialog odmah, pre potvrđivanja
                             handlePrintOrder(order);
                             // Potvrdi porudžbinu u pozadini
-                            confirmOrder(order.id).catch((error: any) => {
+                            confirmOrder(order.id).catch((error) => {
+                              const errorMessage = error instanceof Error ? error.message : 'Nepoznata greška';
                               console.error('Error confirming order:', error);
-                              showToast(`Greška pri potvrđivanju porudžbine: ${error.message || 'Nepoznata greška'}`, 'error');
+                              showToast(`Greška pri potvrđivanju porudžbine: ${errorMessage}`, 'error');
                             });
-                          } catch (error: any) {
+                          } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : 'Nepoznata greška';
                             console.error('Error:', error);
-                            showToast(`Greška: ${error.message || 'Nepoznata greška'}`, 'error');
+                            showToast(`Greška: ${errorMessage}`, 'error');
                           }
                         }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm md:text-base"
+                        className="px-4 py-2 text-white rounded-lg font-semibold transition-colors text-sm md:text-base"
+                        style={{ backgroundColor: '#4CAF50', color: '#FFFFFF' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#45a049'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4CAF50'}
                       >
-                        ✓ Potvrdi
+                        Potvrdi
                       </button>
                     </div>
                   </div>
@@ -256,17 +284,18 @@ export default function WaiterAdminPage() {
 
         {/* Izbor stola */}
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-4 md:mb-6">
-          <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">🍽️ Izaberite sto</h2>
+          <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Izaberite sto</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-4">
             {tables.map(table => (
               <button
                 key={table.id}
                 onClick={() => setSelectedTable(`Sto ${table.number}`)}
-                className={`p-3 md:p-4 rounded-lg border-2 transition-all text-left ${
+                className={`p-3 md:p-4 rounded-lg border transition-all text-left ${
                   selectedTable === `Sto ${table.number}`
-                    ? 'bg-orange-600 text-white border-orange-600 shadow-lg'
-                    : 'bg-white hover:bg-gray-50 border-gray-300 hover:border-orange-400'
+                    ? 'text-white shadow-lg'
+                    : 'bg-white hover:bg-gray-50 border-gray-200'
                 }`}
+                style={selectedTable === `Sto ${table.number}` ? { backgroundColor: '#4CAF50', borderColor: '#4CAF50' } : {}}
               >
                 <div className="font-bold text-base md:text-lg mb-1">Sto {table.number}</div>
                 <div className={`text-xs md:text-sm ${
@@ -282,9 +311,9 @@ export default function WaiterAdminPage() {
               </button>
             ))}
           </div>
-          {selectedTable && (
-            <div className="mt-3 md:mt-4 p-3 md:p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <span className="font-semibold text-orange-800 text-sm md:text-base">✓ Izabran sto: {selectedTable}</span>
+            {selectedTable && (
+            <div className="mt-3 md:mt-4 p-3 md:p-4 bg-white border border-gray-200 rounded-lg">
+              <span className="font-semibold text-gray-800 text-sm md:text-base">Izabran sto: {selectedTable}</span>
             </div>
           )}
         </div>
@@ -292,11 +321,11 @@ export default function WaiterAdminPage() {
         <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
           {/* Menu */}
           <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">📋 Meni</h2>
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Meni</h2>
             
             {/* Hrana */}
             <div className="mb-6 md:mb-8">
-              <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-gray-700 border-b-2 pb-2">🍽️ Hrana</h3>
+              <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-gray-700 border-b-2 pb-2">Hrana</h3>
               <div className="space-y-4">
                 {foodCategories.map(category => {
                   const itemsInCategory = menuItems.filter(item => item.category === category.name);
@@ -310,14 +339,14 @@ export default function WaiterAdminPage() {
                           <button
                             key={item.id}
                             onClick={() => handleAddItem(item)}
-                            className="w-full text-left p-3 md:p-4 bg-gray-50 hover:bg-orange-50 rounded-lg border-2 border-gray-200 hover:border-orange-400 transition-all"
+                            className="w-full text-left p-3 md:p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 hover:border-gray-300 transition-all"
                           >
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                               <div className="flex-1">
                                 <div className="font-semibold text-sm md:text-base text-gray-800 mb-1">{item.name}</div>
                                 <div className="text-xs md:text-sm text-gray-600">{item.description}</div>
                               </div>
-                              <div className="font-bold text-orange-600 sm:ml-4 text-base md:text-lg">{item.price} RSD</div>
+                              <div className="font-bold text-gray-700 sm:ml-4 text-base md:text-lg">{item.price} RSD</div>
                             </div>
                           </button>
                         ))}
@@ -330,7 +359,7 @@ export default function WaiterAdminPage() {
 
             {/* Piće */}
             <div>
-              <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-gray-700 border-b-2 pb-2">🥤 Piće</h3>
+              <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-gray-700 border-b-2 pb-2">Piće</h3>
               <div className="space-y-4">
                 {drinkCategories.map(category => {
                   const itemsInCategory = menuItems.filter(item => item.category === category.name);
@@ -344,14 +373,14 @@ export default function WaiterAdminPage() {
                           <button
                             key={item.id}
                             onClick={() => handleAddItem(item)}
-                            className="w-full text-left p-3 md:p-4 bg-gray-50 hover:bg-orange-50 rounded-lg border-2 border-gray-200 hover:border-orange-400 transition-all"
+                            className="w-full text-left p-3 md:p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 hover:border-gray-300 transition-all"
                           >
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                               <div className="flex-1">
                                 <div className="font-semibold text-sm md:text-base text-gray-800 mb-1">{item.name}</div>
                                 <div className="text-xs md:text-sm text-gray-600">{item.description}</div>
                               </div>
-                              <div className="font-bold text-orange-600 sm:ml-4 text-base md:text-lg">{item.price} RSD</div>
+                              <div className="font-bold text-gray-700 sm:ml-4 text-base md:text-lg">{item.price} RSD</div>
                             </div>
                           </button>
                         ))}
@@ -365,11 +394,10 @@ export default function WaiterAdminPage() {
 
           {/* Porudžbina */}
           <div className="bg-white p-4 md:p-6 rounded-lg shadow-md lg:sticky lg:top-24">
-            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">🛒 Vaša porudžbina</h2>
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Vaša porudžbina</h2>
             
             {selectedItems.length === 0 ? (
               <div className="text-center py-8 md:py-12 text-gray-400 border-2 border-dashed border-gray-300 rounded-lg">
-                <div className="text-4xl md:text-6xl mb-4">🛒</div>
                 <p className="text-base md:text-lg font-semibold mb-2">Nemate stavki u porudžbini</p>
                 <p className="text-xs md:text-sm">Kliknite na stavke iz menija da ih dodate</p>
               </div>
@@ -386,26 +414,34 @@ export default function WaiterAdminPage() {
                         <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border">
                           <button
                             onClick={() => handleUpdateQuantity(item.id, quantity - 1)}
-                            className="w-8 h-8 bg-red-500 text-white rounded font-bold hover:bg-red-600 transition-colors"
+                            className="w-8 h-8 text-white rounded font-bold transition-colors"
+                            style={{ backgroundColor: '#EF4444' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
                           >
                             -
                           </button>
                           <span className="w-10 text-center font-bold">{quantity}</span>
                           <button
                             onClick={() => handleUpdateQuantity(item.id, quantity + 1)}
-                            className="w-8 h-8 bg-green-500 text-white rounded font-bold hover:bg-green-600 transition-colors"
+                            className="w-8 h-8 text-white rounded font-bold transition-colors"
+                            style={{ backgroundColor: '#4CAF50' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#45a049'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4CAF50'}
                           >
                             +
                           </button>
                         </div>
-                        <div className="font-bold text-orange-600 min-w-[80px] sm:min-w-[100px] text-left sm:text-right text-base md:text-lg">
+                        <div className="font-bold text-gray-700 min-w-[80px] sm:min-w-[100px] text-left sm:text-right text-base md:text-lg">
                           {item.price * quantity} RSD
                         </div>
                         <button
                           onClick={() => handleRemoveItem(item.id)}
-                          className="text-red-500 hover:text-red-700 font-bold text-lg md:text-xl px-2 self-start sm:self-center"
+                          className="text-gray-500 hover:text-gray-700 font-bold text-lg md:text-xl px-2 self-start sm:self-center transition-colors"
                         >
-                          ✕
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
                         </button>
                       </div>
                       {/* Komentar input - samo za hranu */}
@@ -415,8 +451,16 @@ export default function WaiterAdminPage() {
                             type="text"
                             value={comment || ''}
                             onChange={(e) => handleUpdateComment(item.id, e.target.value)}
-                            placeholder="💬 Komentar za kuhinju (opciono)..."
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                            placeholder="Komentar za kuhinju (opciono)..."
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none transition-colors"
+                            onFocus={(e) => {
+                              e.target.style.borderColor = '#4CAF50';
+                              e.target.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = '#D1D5DB';
+                              e.target.style.boxShadow = 'none';
+                            }}
                           />
                         </div>
                       )}
@@ -425,20 +469,31 @@ export default function WaiterAdminPage() {
                 </div>
                 
                 <div className="border-t-2 border-gray-300 pt-6">
-                  <div className="flex justify-between items-center mb-4 md:mb-6 bg-orange-50 p-3 md:p-4 rounded-lg">
-                    <span className="text-lg md:text-xl font-bold">UKUPNO:</span>
-                    <span className="text-2xl md:text-3xl font-bold text-orange-600">{getTotalPrice()} RSD</span>
+                  <div className="flex justify-between items-center mb-4 md:mb-6 bg-white border border-gray-200 p-3 md:p-4 rounded-lg">
+                    <span className="text-lg md:text-xl font-bold text-gray-800">UKUPNO:</span>
+                    <span className="text-2xl md:text-3xl font-bold text-gray-800">{getTotalPrice()} RSD</span>
                   </div>
                   <button
                     onClick={handleCreateOrder}
                     disabled={!selectedTable}
                     className={`w-full py-3 md:py-4 rounded-lg font-bold text-base md:text-lg transition-colors shadow-lg ${
                       selectedTable
-                        ? 'bg-green-600 text-white hover:bg-green-700 hover:shadow-xl'
+                        ? 'text-white'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
+                    style={selectedTable ? { backgroundColor: '#4CAF50' } : {}}
+                    onMouseEnter={(e) => {
+                      if (selectedTable) {
+                        e.currentTarget.style.backgroundColor = '#45a049';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedTable) {
+                        e.currentTarget.style.backgroundColor = '#4CAF50';
+                      }
+                    }}
                   >
-                    📤 Kreiraj porudžbinu
+                    Kreiraj porudžbinu
                   </button>
                 </div>
               </>
@@ -476,7 +531,10 @@ export default function WaiterAdminPage() {
               </button>
               <button
                 onClick={finalizeOrderCreation}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700"
+                className="flex-1 py-2 text-white rounded-lg font-semibold transition-colors"
+                style={{ backgroundColor: '#4CAF50' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#45a049'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4CAF50'}
               >
                 Potvrdi
               </button>

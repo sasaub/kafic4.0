@@ -1,14 +1,101 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+interface ColumnRow {
+  COLUMN_NAME: string;
+}
+
+interface OrderRow {
+  id: number;
+  table_name: string;
+  total: number | string;
+  status: string;
+  time: string;
+  date: string | Date;
+  priority: string;
+  destination: string;
+  waiter_id?: number | null;
+}
+
+interface OrderItemRow {
+  name: string;
+  quantity: number;
+  price: number | string;
+  category: string | null;
+  comment?: string | null;
+}
+
+interface CategoryRow {
+  id: number;
+  name: string;
+  type: string;
+}
+
+interface InsertResult {
+  insertId: number;
+}
+
+interface MySQLError extends Error {
+  code?: string;
+}
+
+// Funkcija za proveru i dodavanje waiter_id kolone ako ne postoji
+async function ensureWaiterIdColumn() {
+  try {
+    // Proveri da li kolona postoji
+    const columns = await query(
+      `SELECT COLUMN_NAME 
+       FROM INFORMATION_SCHEMA.COLUMNS 
+       WHERE TABLE_SCHEMA = DATABASE() 
+       AND TABLE_NAME = 'orders' 
+       AND COLUMN_NAME = 'waiter_id'`
+    ) as ColumnRow[];
+    
+    if (!Array.isArray(columns) || columns.length === 0) {
+      // Kolona ne postoji, dodaj je
+      console.log('waiter_id kolona ne postoji, dodajem je...');
+      
+      // Prvo dodaj kolonu
+      await query(`ALTER TABLE orders ADD COLUMN waiter_id INT NULL`);
+      
+      // Zatim dodaj foreign key ako ne postoji
+      try {
+        await query(
+          `ALTER TABLE orders 
+           ADD FOREIGN KEY (waiter_id) REFERENCES users(id) ON DELETE SET NULL`
+        );
+      } catch (fkError) {
+        // Ako foreign key već postoji ili ima problem, ignoriši
+        const mysqlError = fkError as MySQLError;
+        if (mysqlError.code !== 'ER_DUP_KEYNAME' && mysqlError.code !== 'ER_CANT_CREATE_TABLE') {
+          console.error('Error adding foreign key:', fkError);
+        }
+      }
+      
+      console.log('waiter_id kolona je uspešno dodata');
+    }
+  } catch (error) {
+    // Ako već postoji kolona, ignoriši grešku
+    const mysqlError = error as MySQLError;
+    if (mysqlError.code === 'ER_DUP_FIELDNAME') {
+      console.log('waiter_id kolona već postoji');
+    } else {
+      console.error('Error checking/adding waiter_id column:', error);
+    }
+  }
+}
+
 // POST - Potvrdi porudžbinu i kreiraj kuhinjsku porudžbinu ako ima hrane
 export async function POST(request: NextRequest) {
   try {
+    // Proveri i dodaj waiter_id kolonu ako ne postoji
+    await ensureWaiterIdColumn();
+    
     const body = await request.json();
-    const { id } = body;
+    const { id, waiter_id } = body;
 
     // Uzmi porudžbinu
-    const orders: any = await query('SELECT * FROM orders WHERE id = ?', [id]);
+    const orders = await query('SELECT * FROM orders WHERE id = ?', [id]) as OrderRow[];
     const ordersArray = Array.isArray(orders) ? orders : [];
     if (ordersArray.length === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
@@ -22,16 +109,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Uzmi stavke
-    const items: any = await query('SELECT * FROM order_items WHERE order_id = ?', [id]);
+    const items = await query('SELECT * FROM order_items WHERE order_id = ?', [id]) as OrderItemRow[];
     const orderItems = Array.isArray(items) ? items : [];
 
     // Uzmi kategorije
-    const categories: any = await query('SELECT * FROM categories');
+    const categories = await query('SELECT * FROM categories') as CategoryRow[];
     const allCategories = Array.isArray(categories) ? categories : [];
 
     // Razdvoji hranu
-    const foodItems = orderItems.filter((item: any) => {
-      const category = allCategories.find((c: any) => c.name === item.category);
+    const foodItems = orderItems.filter((item: OrderItemRow) => {
+      const category = allCategories.find((c: CategoryRow) => c.name === item.category);
       return category?.type === 'Hrana';
     });
 
@@ -64,13 +151,13 @@ export async function POST(request: NextRequest) {
         destination: 'waiter'
       });
       
-      // SQL upit: 6 kolona, ali status i destination su hardkodovani, tako da treba 5 parametara
-      // table_name=?, total=?, status='Potvrđeno' (hardkodovano), time=?, date=?, priority=?, destination='waiter' (hardkodovano)
-      const waiterOrderResult: any = await query(
-        `INSERT INTO orders (table_name, total, status, time, date, priority, destination) 
-         VALUES (?, ?, 'Potvrđeno', ?, ?, ?, 'waiter')`,
-        [tableName, total, time, date, priority]
-      );
+      // SQL upit: 7 kolona, ali status i destination su hardkodovani, tako da treba 6 parametara
+      // table_name=?, total=?, status='Potvrđeno' (hardkodovano), time=?, date=?, priority=?, destination='waiter' (hardkodovano), waiter_id=?
+      const waiterOrderResult = await query(
+        `INSERT INTO orders (table_name, total, status, time, date, priority, destination, waiter_id) 
+         VALUES (?, ?, 'Potvrđeno', ?, ?, ?, 'waiter', ?)`,
+        [tableName, total, time, date, priority, waiter_id || null]
+      ) as InsertResult;
       
       const waiterOrderId = waiterOrderResult.insertId;
       
@@ -103,17 +190,19 @@ export async function POST(request: NextRequest) {
         message: 'Order confirmed and forwarded to kitchen (same ID for kitchen, new ID for waiter)'
       });
     } else {
-      // Ako nema hrane, samo ažuriraj status na 'Potvrđeno'
-      await query('UPDATE orders SET status = ? WHERE id = ?', ['Potvrđeno', id]);
+      // Ako nema hrane, samo ažuriraj status na 'Potvrđeno' i waiter_id
+      await query('UPDATE orders SET status = ?, waiter_id = ? WHERE id = ?', ['Potvrđeno', waiter_id || null, id]);
       
       return NextResponse.json({ success: true, message: 'Order confirmed' });
     }
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('Error confirming order:', error);
-    console.error('Error stack:', error.stack);
+    if (errorStack) console.error('Error stack:', errorStack);
     return NextResponse.json({ 
-      error: error.message || 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? errorStack : undefined
     }, { status: 500 });
   }
 }

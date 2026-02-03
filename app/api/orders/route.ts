@@ -1,6 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+interface ColumnRow {
+  COLUMN_NAME: string;
+}
+
+interface OrderRow {
+  id: number;
+  table_name: string;
+  total: number | string;
+  status: string;
+  time: string;
+  date: string | Date;
+  priority: string;
+  destination: string;
+  waiter_id?: number | null;
+}
+
+interface OrderItemRow {
+  name: string;
+  quantity: number;
+  price: number | string;
+  category: string;
+  comment?: string | null;
+}
+
+interface InsertResult {
+  insertId: number;
+}
+
+interface MySQLError extends Error {
+  code?: string;
+}
+
+// Funkcija za proveru i dodavanje waiter_id kolone ako ne postoji
+async function ensureWaiterIdColumn() {
+  try {
+    // Proveri da li kolona postoji
+    const columns = await query(
+      `SELECT COLUMN_NAME 
+       FROM INFORMATION_SCHEMA.COLUMNS 
+       WHERE TABLE_SCHEMA = DATABASE() 
+       AND TABLE_NAME = 'orders' 
+       AND COLUMN_NAME = 'waiter_id'`
+    ) as ColumnRow[];
+    
+    if (!Array.isArray(columns) || columns.length === 0) {
+      // Kolona ne postoji, dodaj je
+      console.log('waiter_id kolona ne postoji, dodajem je...');
+      
+      // Prvo dodaj kolonu
+      await query(`ALTER TABLE orders ADD COLUMN waiter_id INT NULL`);
+      
+      // Zatim dodaj foreign key ako ne postoji
+      try {
+        await query(
+          `ALTER TABLE orders 
+           ADD FOREIGN KEY (waiter_id) REFERENCES users(id) ON DELETE SET NULL`
+        );
+      } catch (fkError) {
+        // Ako foreign key već postoji ili ima problem, ignoriši
+        const mysqlError = fkError as MySQLError;
+        if (mysqlError.code !== 'ER_DUP_KEYNAME' && mysqlError.code !== 'ER_CANT_CREATE_TABLE') {
+          console.error('Error adding foreign key:', fkError);
+        }
+      }
+      
+      console.log('waiter_id kolona je uspešno dodata');
+    }
+  } catch (error) {
+    // Ako već postoji kolona, ignoriši grešku
+    const mysqlError = error as MySQLError;
+    if (mysqlError.code === 'ER_DUP_FIELDNAME') {
+      console.log('waiter_id kolona već postoji');
+    } else {
+      console.error('Error checking/adding waiter_id column:', error);
+    }
+  }
+}
+
 // GET - Vrati sve porudžbine
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +93,7 @@ export async function GET(request: NextRequest) {
       FROM orders o
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (status) {
       sql += ' AND o.status = ?';
@@ -32,12 +110,13 @@ export async function GET(request: NextRequest) {
 
     sql += ' ORDER BY o.created_at DESC';
 
-    let ordersResult: any;
+    let ordersResult: OrderRow[];
     try {
-      ordersResult = await query(sql, params);
-    } catch (dbError: any) {
+      ordersResult = await query(sql, params) as OrderRow[];
+    } catch (dbError) {
       // Ako tabela ne postoji ili nema podataka, vrati prazan array
-      if (dbError.code === 'ER_NO_SUCH_TABLE' || dbError.code === '42S02') {
+      const mysqlError = dbError as MySQLError;
+      if (mysqlError.code === 'ER_NO_SUCH_TABLE' || mysqlError.code === '42S02') {
         console.log('Orders table does not exist yet, returning empty array');
         return NextResponse.json([]);
       }
@@ -51,16 +130,16 @@ export async function GET(request: NextRequest) {
 
     // Za svaku porudžbinu, uzmi stavke
     const orders = await Promise.all(
-      ordersResult.map(async (order: any) => {
-        const itemsResult: any = await query(
+      ordersResult.map(async (order: OrderRow) => {
+        const itemsResult = await query(
           'SELECT name, quantity, price, category, comment FROM order_items WHERE order_id = ?',
           [order.id]
-        );
+        ) as OrderItemRow[];
 
-        const items = Array.isArray(itemsResult) ? itemsResult.map((item: any) => ({
+        const items = Array.isArray(itemsResult) ? itemsResult.map((item: OrderItemRow) => ({
           name: item.name,
           quantity: item.quantity,
-          price: parseFloat(item.price),
+          price: parseFloat(String(item.price)),
           category: item.category,
           comment: item.comment || undefined,
         })) : [];
@@ -103,6 +182,7 @@ export async function GET(request: NextRequest) {
           date: formattedDate, // YYYY-MM-DD format
           priority: order.priority,
           destination: order.destination,
+          waiter_id: order.waiter_id !== undefined ? order.waiter_id : null,
         };
       })
     );
@@ -113,11 +193,13 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('Error fetching orders:', error);
-    console.error('Error stack:', error.stack);
+    if (errorStack) console.error('Error stack:', errorStack);
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       {
         status: 500,
         headers: {
@@ -131,8 +213,11 @@ export async function GET(request: NextRequest) {
 // POST - Kreiraj novu porudžbinu
 export async function POST(request: NextRequest) {
   try {
+    // Proveri i dodaj waiter_id kolonu ako ne postoji
+    await ensureWaiterIdColumn();
+    
     const body = await request.json();
-    const { table, items, total } = body;
+    const { table, items, total, waiter_id } = body;
 
     // Koristi lokalno vreme, ne UTC
     const now = new Date();
@@ -148,11 +233,11 @@ export async function POST(request: NextRequest) {
     else if (total > 1000) priority = 'medium';
 
     // Kreiraj porudžbinu
-    const orderResult: any = await query(
-      `INSERT INTO orders (table_name, total, status, time, date, priority, destination) 
-       VALUES (?, ?, 'Novo', ?, ?, ?, 'waiter')`,
-      [table, total, time, date, priority]
-    );
+    const orderResult = await query(
+      `INSERT INTO orders (table_name, total, status, time, date, priority, destination, waiter_id) 
+       VALUES (?, ?, 'Novo', ?, ?, ?, 'waiter', ?)`,
+      [table, total, time, date, priority, waiter_id || null]
+    ) as InsertResult;
 
     const orderId = orderResult.insertId;
 
@@ -166,9 +251,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ id: orderId, success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error creating order:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -180,7 +266,7 @@ export async function PUT(request: NextRequest) {
 
     // Proveri da li je porudžbina već "Potvrđeno" - ne dozvoljava menjanje statusa
     // Status "Potvrđeno" se ne može menjati - samo waiter/waiter-admin može potvrditi
-    const existingOrder: any = await query('SELECT status FROM orders WHERE id = ?', [id]);
+    const existingOrder = await query('SELECT status FROM orders WHERE id = ?', [id]) as Array<{ status: string }>;
     if (existingOrder && existingOrder.length > 0 && existingOrder[0].status === 'Potvrđeno' && status) {
       return NextResponse.json({ error: 'Ne možete menjati status potvrđene porudžbine. Status "Potvrđeno" se ne može menjati.' }, { status: 400 });
     }
@@ -193,9 +279,10 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error updating order:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -213,9 +300,10 @@ export async function DELETE(request: NextRequest) {
     await query('DELETE FROM orders WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error deleting order:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

@@ -62,9 +62,12 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       
       const data = await response.json();
       setMenuItems(Array.isArray(data) ? data : []);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
       console.error('Error fetching menu:', error);
-      console.error('Error details:', error.message, error.stack);
+      console.error('Error details:', errorMessage);
+      if (errorStack) console.error('Error stack:', errorStack);
       setMenuItems([]);
     }
   };
@@ -95,9 +98,12 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       
       const data = await response.json();
       setCategories(Array.isArray(data) ? data : []);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
       console.error('Error fetching categories:', error);
-      console.error('Error details:', error.message, error.stack);
+      console.error('Error details:', errorMessage);
+      if (errorStack) console.error('Error stack:', errorStack);
       setCategories([]);
     }
   };

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useMenu } from '../../context/MenuContext';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../../components/ToastProvider';
+import Link from 'next/link';
 
 export default function AdminMenuPage() {
   const { user, logout, isLoading } = useAuth();
@@ -108,21 +110,27 @@ export default function AdminMenuPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA' }}>
       {/* Header */}
-      <div className="bg-gray-800 text-white p-6">
+      <div className="p-6" style={{ backgroundColor: '#2B2E34' }}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Upravljanje Menijem</h1>
-            <p className="text-gray-300">Dodajte, izmenite ili obrišite jela</p>
+            <h1 className="text-3xl font-bold" style={{ color: '#FFFFFF' }}>Upravljanje Menijem</h1>
+            <p className="mt-2" style={{ color: '#FFFFFF', opacity: 0.8 }}>Dodajte, izmenite ili obrišite jela</p>
           </div>
           <div className="flex gap-3">
-            <Link href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
-              ← Nazad
+            <Link href="/admin" className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Nazad
             </Link>
             <button 
               onClick={logout}
-              className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
             >
               Odjavi se
             </button>
@@ -141,22 +149,36 @@ export default function AdminMenuPage() {
                 setShowAddForm(!showAddForm);
               }
             }}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+            className="px-6 py-3 text-white rounded-lg font-semibold transition-colors"
+            style={{ backgroundColor: '#4CAF50' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#45a049'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4CAF50'}
           >
-            {editingItem ? '✕ Otkaži izmenu' : '+ Dodaj novo jelo'}
+            {editingItem ? 'Otkaži izmenu' : '+ Dodaj novo jelo'}
           </button>
           <a
             href="/admin/categories"
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+            className="px-6 py-3 text-white rounded-lg font-semibold transition-colors"
+            style={{ backgroundColor: '#1F7A5A' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1a6b4f'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1F7A5A'}
           >
-            📑 Kategorije
+            Kategorije
           </a>
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="🔍 Pretraži jela..."
-            className="flex-1 min-w-[200px] px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+            placeholder="Pretraži jela..."
+            className="flex-1 min-w-[200px] px-4 py-3 border border-gray-300 rounded-lg focus:outline-none transition-colors"
+            onFocus={(e) => {
+              e.target.style.borderColor = '#4CAF50';
+              e.target.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#D1D5DB';
+              e.target.style.boxShadow = 'none';
+            }}
           />
         </div>
 
@@ -171,7 +193,15 @@ export default function AdminMenuPage() {
                   type="text"
                   value={newItem.name}
                   onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition-colors"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#4CAF50';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#D1D5DB';
+                    e.target.style.boxShadow = 'none';
+                  }}
                   placeholder="Npr. Ćevapi"
                 />
               </div>
@@ -180,7 +210,15 @@ export default function AdminMenuPage() {
                 <select
                   value={newItem.category}
                   onChange={(e) => setNewItem({...newItem, category: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition-colors"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#4CAF50';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#D1D5DB';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 >
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.name}>{cat.name}</option>
@@ -192,7 +230,15 @@ export default function AdminMenuPage() {
                 <textarea
                   value={newItem.description}
                   onChange={(e) => setNewItem({...newItem, description: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition-colors"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#4CAF50';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#D1D5DB';
+                    e.target.style.boxShadow = 'none';
+                  }}
                   rows={3}
                   placeholder="Kratki opis jela"
                 />
@@ -203,7 +249,15 @@ export default function AdminMenuPage() {
                   type="number"
                   value={newItem.price}
                   onChange={(e) => setNewItem({...newItem, price: Number(e.target.value)})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition-colors"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#4CAF50';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#D1D5DB';
+                    e.target.style.boxShadow = 'none';
+                  }}
                   placeholder="0"
                 />
               </div>
@@ -211,7 +265,10 @@ export default function AdminMenuPage() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={editingItem ? saveEdit : addItem}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="px-6 py-2 text-white rounded-lg transition-colors"
+                style={{ backgroundColor: '#4CAF50' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#45a049'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4CAF50'}
               >
                 {editingItem ? 'Sačuvaj izmene' : 'Sačuvaj'}
               </button>
@@ -239,7 +296,7 @@ export default function AdminMenuPage() {
           return (
             <div key={category.id} className="mb-6">
               <h2 className="text-2xl font-bold mb-4">
-                {category.type === 'Hrana' ? '🍽️' : '🥤'} {category.name}
+                {category.name}
               </h2>
               <div className="bg-white rounded-lg shadow-md overflow-hidden">
                 <table className="w-full">
@@ -256,18 +313,24 @@ export default function AdminMenuPage() {
                       <tr key={item.id} className="border-t">
                         <td className="px-6 py-4 font-semibold">{item.name}</td>
                         <td className="px-6 py-4 text-gray-600">{item.description}</td>
-                        <td className="px-6 py-4 font-bold text-orange-600">{item.price} RSD</td>
+                        <td className="px-6 py-4 font-bold text-gray-700">{item.price} RSD</td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
                             <button
                               onClick={() => startEdit(item)}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              className="px-4 py-2 text-white rounded-lg transition-colors"
+                              style={{ backgroundColor: '#1F7A5A' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1a6b4f'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1F7A5A'}
                             >
                               Izmeni
                             </button>
                             <button
                               onClick={() => deleteItem(item.id)}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                              className="px-4 py-2 text-white rounded-lg transition-colors"
+                              style={{ backgroundColor: '#EF4444' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
                             >
                               Obriši
                             </button>

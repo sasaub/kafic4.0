@@ -190,24 +190,33 @@ export default function RevenuePage() {
     .sort((a, b) => b.revenue - a.revenue);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA' }}>
       {/* Header */}
-      <div className="bg-gray-800 text-white p-6">
+      <div className="p-6" style={{ backgroundColor: '#2B2E34' }}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">💰 Pregled Zarade</h1>
-            <p className="text-gray-300">Dobrodošli, {user.username}</p>
+            <h1 className="text-3xl font-bold" style={{ color: '#FFFFFF' }}>Pregled Zarade</h1>
+            <p className="mt-2" style={{ color: '#FFFFFF', opacity: 0.8 }}>Dobrodošli, {user.username}</p>
           </div>
           <div className="flex gap-4">
             <a
               href="/admin"
-              className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
             >
-              ← Nazad
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Nazad
             </a>
             <button
               onClick={logout}
-              className="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
             >
               Odjavi se
             </button>
@@ -223,21 +232,23 @@ export default function RevenuePage() {
               onClick={() => setFilterType('day')}
               className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
                 filterType === 'day'
-                  ? 'bg-orange-600 text-white'
+                  ? 'text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
+              style={filterType === 'day' ? { backgroundColor: '#2B2E34' } : {}}
             >
-              📅 Dan
+              Dan
             </button>
             <button
               onClick={() => setFilterType('period')}
               className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
                 filterType === 'period'
-                  ? 'bg-orange-600 text-white'
+                  ? 'text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
+              style={filterType === 'period' ? { backgroundColor: '#2B2E34' } : {}}
             >
-              📆 Period
+              Period
             </button>
           </div>
 
@@ -270,7 +281,7 @@ export default function RevenuePage() {
           <h2 className="text-2xl font-bold mb-4">
             Ukupna zarada {filterType === 'day' ? `za ${formatDate(selectedDate)}` : `od ${formatDate(dateFrom)} do ${formatDate(dateTo)}`}
           </h2>
-          <div className="text-4xl font-bold text-green-600">
+          <div className="text-4xl font-bold text-gray-800">
             {totalRevenue.toLocaleString()} RSD
           </div>
           <div className="text-sm text-gray-500 mt-2">
@@ -281,30 +292,14 @@ export default function RevenuePage() {
         {/* Top tables by revenue */}
         {topTables.length > 0 && (
           <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-            <h2 className="text-2xl font-bold mb-4">🏆 Stolovi po zaradi</h2>
+            <h2 className="text-2xl font-bold mb-4">Stolovi po zaradi</h2>
             <div className="space-y-3">
               {topTables.map((item, index) => (
                 <div
                   key={item.table}
-                  className={`flex justify-between items-center p-4 rounded-lg border-2 ${
-                    index === 0
-                      ? 'bg-yellow-500'
-                      : index === 1
-                      ? 'bg-gray-500'
-                      : index === 2
-                      ? 'bg-orange-500'
-                      : 'bg-gray-400'
-                  }`}>
+                  className="flex justify-between items-center p-4 rounded-lg border border-gray-200 bg-white">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                        index === 0
-                          ? 'bg-yellow-500'
-                          : index === 1
-                          ? 'bg-gray-500'
-                          : index === 2
-                          ? 'bg-orange-500'
-                          : 'bg-gray-400'
-                      }`}>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-200 text-gray-700 font-bold">
                         {index + 1}
                       </div>
                       <div>
@@ -313,7 +308,7 @@ export default function RevenuePage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xl font-bold text-green-600">{item.revenue.toLocaleString()} RSD</div>
+                      <div className="text-xl font-bold text-gray-800">{item.revenue.toLocaleString()} RSD</div>
                     </div>
                   </div>
               ))}

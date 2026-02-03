@@ -6,7 +6,11 @@
     "dev": "next dev -H 0.0.0.0 --turbopack",
     "build": "next build --turbopack",
     "start": "next start -H 0.0.0.0",
-    "lint": "eslint"
+    "lint": "eslint",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop qr-restaurant",
+    "pm2:restart": "pm2 restart qr-restaurant",
+    "pm2:logs": "pm2 logs qr-restaurant"
   },
   "dependencies": {
     "mysql2": "^3.15.3",

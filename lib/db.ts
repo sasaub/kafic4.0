@@ -11,15 +11,17 @@ export function getDbPool(): mysql.Pool {
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'qr_restaurant',
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '20'), // Povećano za produkciju
       queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
     });
   }
   return pool;
 }
 
 // Helper funkcija za izvršavanje query-ja
-export async function query(sql: string, params?: any[]) {
+export async function query(sql: string, params?: (string | number | null | boolean)[]) {
   try {
     const connection = await getDbPool().getConnection();
     try {
@@ -28,7 +30,7 @@ export async function query(sql: string, params?: any[]) {
     } finally {
       connection.release();
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Database query error:', error);
     console.error('SQL:', sql);
     console.error('Params:', params);

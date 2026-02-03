@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+interface User {
+  id: number;
+  username: string;
+  password: string;
+  role: string;
+}
+
 // POST - Login
 export async function POST(request: NextRequest) {
   try {
@@ -9,10 +16,10 @@ export async function POST(request: NextRequest) {
 
     console.log('Login attempt:', { username, password: password ? '***' : 'empty' });
 
-    const users: any = await query(
+    const users = await query(
       'SELECT * FROM users WHERE username = ? AND password = ?',
       [username, password]
-    );
+    ) as User[];
 
     console.log('Query result:', users);
 
@@ -30,10 +37,12 @@ export async function POST(request: NextRequest) {
       username: user.username,
       role: user.role,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('Error during login:', error);
-    console.error('Error stack:', error.stack);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (errorStack) console.error('Error stack:', errorStack);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

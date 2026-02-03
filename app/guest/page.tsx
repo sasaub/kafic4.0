@@ -27,7 +27,7 @@ function GuestPageContent() {
   // Prikaži loading dok se podaci učitavaju
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F5F7FA' }}>
         <div className="text-center">
           <div className="text-4xl mb-4 animate-pulse">🍽️</div>
           <div className="text-2xl font-bold text-gray-700">Učitavanje menija...</div>
@@ -95,7 +95,7 @@ function GuestPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA' }}>
       {/* Header */}
       <div className="bg-orange-600 text-white p-6 sticky top-0 z-10">
         <h1 className="text-3xl font-bold">Meni Restorana</h1>
@@ -227,7 +227,7 @@ function GuestPageContent() {
 export default function GuestPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F5F7FA' }}>
         <div className="text-center">
           <div className="text-4xl mb-4 animate-pulse">🍽️</div>
           <div className="text-2xl font-bold text-gray-700">Učitavanje...</div>

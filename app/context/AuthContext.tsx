@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let errorData;
         try {
           errorData = await response.json();
-        } catch (e) {
+        } catch {
           errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
         }
         console.error('AuthContext: Login failed:', errorData);
@@ -104,10 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       return true;
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
       console.error('AuthContext: Error during login:', error);
-      console.error('AuthContext: Error message:', error?.message);
-      console.error('AuthContext: Error stack:', error?.stack);
+      console.error('AuthContext: Error message:', errorMessage);
+      if (errorStack) console.error('AuthContext: Error stack:', errorStack);
       return false;
     }
   };

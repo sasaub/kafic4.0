@@ -7,6 +7,12 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '../../components/ToastProvider';
 import Link from 'next/link';
 
+interface User {
+  id: number;
+  username: string;
+  role: string;
+}
+
 export default function AdminOrdersPage() {
   const { orders, updateOrderStatus, deleteOrder } = useOrders();
   const { user, logout, isLoading } = useAuth();
@@ -16,12 +22,36 @@ export default function AdminOrdersPage() {
   // HOOKS na vrhu! - SVI hooks moraju biti pre bilo kakvih uslovnih return-ova
   const [filter, setFilter] = useState<string>('Sve');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
     }
   }, [user, router, isLoading]);
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      fetchUsers();
+    }
+  }, [user]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Greška pri učitavanju korisnika');
+      const data = await response.json();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const getWaiterName = (waiterId: number | null | undefined) => {
+    if (!waiterId) return 'Gost (QR kod)';
+    const waiter = users.find(u => u.id === waiterId);
+    return waiter ? waiter.username : 'Nepoznato';
+  };
 
   if (isLoading) {
     return (
@@ -68,9 +98,9 @@ export default function AdminOrdersPage() {
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
-      case 'Novo': return 'bg-blue-100 text-blue-800';
-      case 'U pripremi': return 'bg-yellow-100 text-yellow-800';
-      case 'Spremno': return 'bg-green-100 text-green-800';
+      case 'Novo': return 'bg-gray-100 text-gray-800';
+      case 'U pripremi': return 'bg-gray-100 text-gray-800';
+      case 'Spremno': return 'bg-gray-100 text-gray-800';
       case 'Dostavljeno': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -80,21 +110,27 @@ export default function AdminOrdersPage() {
   const statusOptions: Order['status'][] = ['Novo', 'Spremno'];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA' }}>
       {/* Header */}
-      <div className="bg-gray-800 text-white p-6">
+      <div className="p-6" style={{ backgroundColor: '#2B2E34' }}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Upravljanje Narudžbama</h1>
-            <p className="text-gray-300">Pregled i ažuriranje statusa narudžbi</p>
+            <h1 className="text-3xl font-bold" style={{ color: '#FFFFFF' }}>Upravljanje Narudžbama</h1>
+            <p className="mt-2" style={{ color: '#FFFFFF', opacity: 0.8 }}>Pregled i ažuriranje statusa narudžbi</p>
           </div>
           <div className="flex gap-3">
-            <Link href="/admin" className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
-              ← Nazad
+            <Link href="/admin" className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Nazad
             </Link>
             <button 
               onClick={logout}
-              className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
             >
               Odjavi se
             </button>
@@ -112,9 +148,10 @@ export default function AdminOrdersPage() {
                 onClick={() => setFilter(status)}
                 className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
                   filter === status
-                    ? 'bg-orange-600 text-white'
+                    ? 'text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
+                style={filter === status ? { backgroundColor: '#2B2E34' } : {}}
               >
                 {status}
               </button>
@@ -124,17 +161,17 @@ export default function AdminOrdersPage() {
 
         {/* Statistika */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-blue-500 text-white p-4 rounded-lg">
-            <div className="text-2xl font-bold">{allOrders.filter(o => o.status === 'Novo').length}</div>
-            <div className="text-sm opacity-90">Nove</div>
+          <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+            <div className="text-2xl font-bold text-gray-800">{allOrders.filter(o => o.status === 'Novo').length}</div>
+            <div className="text-sm text-gray-600">Nove</div>
           </div>
-          <div className="bg-green-500 text-white p-4 rounded-lg">
-            <div className="text-2xl font-bold">{allOrders.filter(o => o.status === 'Potvrđeno').length}</div>
-            <div className="text-sm opacity-90">Potvrđeno</div>
+          <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+            <div className="text-2xl font-bold text-gray-800">{allOrders.filter(o => o.status === 'Potvrđeno').length}</div>
+            <div className="text-sm text-gray-600">Potvrđeno</div>
           </div>
-          <div className="bg-purple-500 text-white p-4 rounded-lg">
-            <div className="text-2xl font-bold">{allOrders.filter(o => o.status === 'Spremno').length}</div>
-            <div className="text-sm opacity-90">Spremno</div>
+          <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+            <div className="text-2xl font-bold text-gray-800">{allOrders.filter(o => o.status === 'Spremno').length}</div>
+            <div className="text-sm text-gray-600">Spremno</div>
           </div>
         </div>
 
@@ -158,9 +195,12 @@ export default function AdminOrdersPage() {
                     <p className="text-gray-600 mt-1">
                       {order.table} • {order.time}
                     </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Kreirao: {getWaiterName(order.waiter_id)}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-orange-600">{order.total} RSD</div>
+                    <div className="text-2xl font-bold text-gray-800">{order.total} RSD</div>
                   </div>
                 </div>
 
@@ -176,14 +216,17 @@ export default function AdminOrdersPage() {
                 <div className="flex gap-2 flex-wrap items-center">
                   {order.status === 'Potvrđeno' ? (
                     <div className="flex items-center gap-2">
-                      <span className="px-4 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">
+                      <span className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg font-semibold">
                         Potvrđeno - Status se ne može menjati
                       </span>
                       <button
                         onClick={() => handleDeleteOrder(order.id)}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        className="px-4 py-2 text-white rounded-lg transition-colors"
+                        style={{ backgroundColor: '#EF4444' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
                       >
-                        🗑️ Obriši (Storniraj)
+                        Obriši (Storniraj)
                       </button>
                     </div>
                   ) : (
@@ -196,17 +239,31 @@ export default function AdminOrdersPage() {
                           className={`px-4 py-2 rounded-lg transition-colors ${
                             order.status === status
                               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'bg-gray-800 text-white hover:bg-gray-700'
+                              : 'text-white'
                           }`}
+                          style={order.status !== status ? { backgroundColor: '#1F7A5A' } : {}}
+                          onMouseEnter={(e) => {
+                            if (order.status !== status) {
+                              e.currentTarget.style.backgroundColor = '#1a6b4f';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (order.status !== status) {
+                              e.currentTarget.style.backgroundColor = '#1F7A5A';
+                            }
+                          }}
                         >
                           {status}
                         </button>
                       ))}
                       <button
                         onClick={() => handleDeleteOrder(order.id)}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        className="px-4 py-2 text-white rounded-lg transition-colors"
+                        style={{ backgroundColor: '#EF4444' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
                       >
-                        🗑️ Obriši
+                        Obriši
                       </button>
                     </>
                   )}
@@ -232,7 +289,10 @@ export default function AdminOrdersPage() {
               </button>
               <button
                 onClick={() => confirmDelete(showDeleteConfirm)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="px-4 py-2 text-white rounded-lg transition-colors"
+                style={{ backgroundColor: '#EF4444' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
               >
                 Obriši
               </button>

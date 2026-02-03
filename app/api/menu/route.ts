@@ -1,38 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+interface MenuItemRow {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number | string;
+  category_name: string;
+  category_type: string;
+}
+
+interface CategoryRow {
+  id: number;
+}
+
+interface InsertResult {
+  insertId: number;
+}
+
+interface MySQLError extends Error {
+  code?: string;
+}
+
 // GET - Vrati sve meni stavke
 export async function GET() {
   try {
-    const items: any = await query(`
+    const items = await query(`
       SELECT m.*, c.name as category_name, c.type as category_type
       FROM menu_items m
       JOIN categories c ON m.category_id = c.id
       ORDER BY c.type, c.name, m.name
-    `);
+    `) as MenuItemRow[];
 
     // Ako nema rezultata ili je greška, vrati prazan array
     if (!items || !Array.isArray(items)) {
       return NextResponse.json([]);
     }
 
-    const menuItems = items.map((item: any) => ({
+    const menuItems = items.map((item: MenuItemRow) => ({
       id: item.id,
       name: item.name,
       description: item.description || '',
-      price: parseFloat(item.price),
+      price: parseFloat(String(item.price)),
       category: item.category_name,
     }));
 
     return NextResponse.json(menuItems);
-  } catch (error: any) {
+  } catch (error) {
     // Ako tabela ne postoji, vrati prazan array umesto greške
-    if (error.code === 'ER_NO_SUCH_TABLE' || error.code === '42S02') {
+    const mysqlError = error as MySQLError;
+    if (mysqlError.code === 'ER_NO_SUCH_TABLE' || mysqlError.code === '42S02') {
       console.log('Menu items table does not exist yet, returning empty array');
       return NextResponse.json([]);
     }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error fetching menu:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -43,7 +66,7 @@ export async function POST(request: NextRequest) {
     const { name, description, price, category } = body;
 
     // Pronađi category_id
-    const categories: any = await query('SELECT id FROM categories WHERE name = ?', [category]);
+    const categories = await query('SELECT id FROM categories WHERE name = ?', [category]) as CategoryRow[];
     const categoriesArray = Array.isArray(categories) ? categories : [];
     if (categoriesArray.length === 0) {
       return NextResponse.json({ error: 'Category not found' }, { status: 400 });
@@ -51,15 +74,16 @@ export async function POST(request: NextRequest) {
 
     const categoryId = categoriesArray[0].id;
 
-    const result: any = await query(
+    const result = await query(
       'INSERT INTO menu_items (name, description, price, category_id) VALUES (?, ?, ?, ?)',
       [name, description || null, price, categoryId]
-    );
+    ) as InsertResult;
 
     return NextResponse.json({ id: result.insertId, success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error creating menu item:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -69,16 +93,16 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, name, description, price, category } = body;
 
-    let categoryId = null;
+    let categoryId: number | null = null;
     if (category) {
-      const categories: any = await query('SELECT id FROM categories WHERE name = ?', [category]);
+      const categories = await query('SELECT id FROM categories WHERE name = ?', [category]) as CategoryRow[];
       if (categories.length > 0) {
         categoryId = categories[0].id;
       }
     }
 
     const updates: string[] = [];
-    const params: any[] = [];
+    const params: (string | number | null)[] = [];
 
     if (name) {
       updates.push('name = ?');
@@ -105,9 +129,10 @@ export async function PUT(request: NextRequest) {
     );
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error updating menu item:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -124,9 +149,10 @@ export async function DELETE(request: NextRequest) {
     await query('DELETE FROM menu_items WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error deleting menu item:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

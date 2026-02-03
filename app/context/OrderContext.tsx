@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 export interface OrderItem {
   name: string;
@@ -20,6 +21,7 @@ export interface Order {
   date: string;
   priority: 'low' | 'medium' | 'high';
   destination: 'kitchen' | 'waiter';
+  waiter_id?: number | null;
 }
 
 interface OrderContextType {
@@ -34,11 +36,11 @@ interface OrderContextType {
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export function OrderProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Učitaj porudžbine sa API-ja
-  const fetchOrders = async () => {
+  // Učitaj porudžbine sa API-ja - memoizovano sa useCallback
+  const fetchOrders = useCallback(async () => {
     try {
       const response = await fetch('/api/orders', {
         method: 'GET',
@@ -46,7 +48,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
         },
         cache: 'no-store',
-        credentials: 'same-origin', // Dodaj credentials za bolju kompatibilnost
+        credentials: 'same-origin',
       });
       
       if (!response.ok) {
@@ -62,31 +64,42 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       }
       
       const data = await response.json();
-      setOrders(Array.isArray(data) ? data : []);
-    } catch (error: any) {
+      setOrders(prevOrders => {
+        const newOrders = Array.isArray(data) ? data : [];
+        // Ažuriraj samo ako se promenilo
+        if (JSON.stringify(prevOrders) !== JSON.stringify(newOrders)) {
+          return newOrders;
+        }
+        return prevOrders;
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
       console.error('Error fetching orders:', error);
-      console.error('Error details:', error.message, error.stack);
-      // Postavi prazan array umesto da ostane undefined
+      console.error('Error details:', errorMessage);
+      if (errorStack) console.error('Error stack:', errorStack);
       setOrders([]);
     } finally {
-      setIsLoaded(true);
+      // Orders loaded
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
     
-    // Optimizovan polling - 1 sekund za brži odziv
-    const interval = setInterval(fetchOrders, 1000);
+    // Optimizovan polling - 3 sekunde u produkciji, 2 sekunde u dev
+    const pollInterval = process.env.NODE_ENV === 'production' ? 3000 : 2000;
+    const interval = setInterval(fetchOrders, pollInterval);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchOrders]);
 
-  const addOrder = async (orderData: Omit<Order, 'id' | 'time' | 'date' | 'status' | 'priority' | 'destination'>) => {
+  const addOrder = useCallback(async (orderData: Omit<Order, 'id' | 'time' | 'date' | 'status' | 'priority' | 'destination'>) => {
     try {
+      const waiterId = (user && (user.role === 'waiter-admin' || user.role === 'waiter')) ? user.id : null;
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify({ ...orderData, waiter_id: waiterId }),
       });
       
       if (!response.ok) throw new Error('Failed to create order');
@@ -97,42 +110,54 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       console.error('Error creating order:', error);
       throw error;
     }
-  };
+  }, [user, fetchOrders]);
 
-  const updateOrderStatus = async (id: number, status: Order['status']) => {
+  const updateOrderStatus = useCallback(async (id: number, status: Order['status']) => {
     try {
+      // Optimistički update - ažuriraj lokalno odmah
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === id ? { ...order, status } : order
+        )
+      );
+      
       const response = await fetch('/api/orders', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status }),
       });
       
-      if (!response.ok) throw new Error('Failed to update order');
+      if (!response.ok) {
+        // Rollback ako ne uspe
+        await fetchOrders();
+        throw new Error('Failed to update order');
+      }
       
-      // Refresh orders
+      // Refresh orders za konzistentnost
       await fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
+      // Rollback
+      await fetchOrders();
       throw error;
     }
-  };
+  }, [fetchOrders]);
 
-  const confirmOrder = async (id: number) => {
+  const confirmOrder = useCallback(async (id: number) => {
     try {
+      const waiterId = (user && (user.role === 'waiter-admin' || user.role === 'waiter')) ? user.id : null;
       const response = await fetch('/api/orders/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, waiter_id: waiterId }),
       });
       
       if (!response.ok) {
-        // Proveri da li je response JSON ili HTML
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to confirm order');
         } else {
-          // Ako nije JSON, verovatno je HTML error page
           const text = await response.text();
           console.error('Non-JSON response:', text.substring(0, 200));
           throw new Error(`Server error: ${response.status} ${response.statusText}`);
@@ -144,32 +169,50 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       // Refresh orders
       await fetchOrders();
       
-      // Vrati result da waiter-admin može da štampa
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error confirming order:', error);
       throw error;
     }
-  };
+  }, [user, fetchOrders]);
 
-  const deleteOrder = async (id: number) => {
+  const deleteOrder = useCallback(async (id: number) => {
     try {
+      // Optimistički delete
+      setOrders(prevOrders => prevOrders.filter(order => order.id !== id));
+      
       const response = await fetch(`/api/orders?id=${id}`, {
         method: 'DELETE',
       });
       
-      if (!response.ok) throw new Error('Failed to delete order');
+      if (!response.ok) {
+        // Rollback ako ne uspe
+        await fetchOrders();
+        throw new Error('Failed to delete order');
+      }
       
-      // Refresh orders
+      // Refresh orders za konzistentnost
       await fetchOrders();
     } catch (error) {
       console.error('Error deleting order:', error);
+      // Rollback
+      await fetchOrders();
       throw error;
     }
-  };
+  }, [fetchOrders]);
+
+  // Memoizuj context value da se ne kreira novi objekat na svakom renderu
+  const contextValue = useMemo(() => ({
+    orders,
+    addOrder,
+    updateOrderStatus,
+    confirmOrder,
+    deleteOrder,
+    refreshOrders: fetchOrders
+  }), [orders, addOrder, updateOrderStatus, confirmOrder, deleteOrder, fetchOrders]);
 
   return (
-    <OrderContext.Provider value={{ orders, addOrder, updateOrderStatus, confirmOrder, deleteOrder, refreshOrders: fetchOrders }}>
+    <OrderContext.Provider value={contextValue}>
       {children}
     </OrderContext.Provider>
   );

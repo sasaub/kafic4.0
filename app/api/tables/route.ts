@@ -1,18 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+interface TableRow {
+  id: number;
+  number: number | string;
+  capacity: number;
+  status: string;
+  qr_code: string;
+  monthly_payment: number;
+}
+
+interface MonthlyPaymentRow {
+  id: number;
+  amount: number | string;
+  date: string;
+  time: string;
+  note: string | null;
+}
+
+interface InsertResult {
+  insertId: number;
+}
+
 // GET - Vrati sve stolove
 export async function GET() {
   try {
-    const tables: any = await query('SELECT * FROM tables ORDER BY number');
+    const tables = await query('SELECT * FROM tables ORDER BY number') as TableRow[];
     
     // Uzmi mesečna plaćanja za svaki sto
     const tablesWithPayments = await Promise.all(
-      (Array.isArray(tables) ? tables : []).map(async (table: any) => {
-        const payments: any = await query(
+      (Array.isArray(tables) ? tables : []).map(async (table: TableRow) => {
+        const payments = await query(
           'SELECT * FROM monthly_payments WHERE table_id = ? ORDER BY date DESC, time DESC',
           [table.id]
-        );
+        ) as MonthlyPaymentRow[];
         return {
           id: table.id,
           number: String(table.number),
@@ -20,9 +41,9 @@ export async function GET() {
           status: table.status,
           qrCode: table.qr_code,
           monthlyPayment: table.monthly_payment === 1,
-          monthlyPayments: (Array.isArray(payments) ? payments : []).map((p: any) => ({
+          monthlyPayments: (Array.isArray(payments) ? payments : []).map((p: MonthlyPaymentRow) => ({
             id: p.id,
-            amount: parseFloat(p.amount),
+            amount: parseFloat(String(p.amount)),
             date: p.date,
             time: p.time,
             note: p.note,
@@ -32,9 +53,10 @@ export async function GET() {
     );
 
     return NextResponse.json(tablesWithPayments);
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error fetching tables:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -47,15 +69,16 @@ export async function POST(request: NextRequest) {
     const tableNumberStr = number.toString().replace(/\s+/g, '-');
     const qrCode = `QR-${tableNumberStr.padStart(3, '0')}`;
 
-    const result: any = await query(
+    const result = await query(
       'INSERT INTO tables (number, capacity, status, qr_code, monthly_payment) VALUES (?, ?, ?, ?, ?)',
       [number, capacity, status || 'Slobodan', qrCode, monthlyPayment ? 1 : 0]
-    );
+    ) as InsertResult;
 
     return NextResponse.json({ id: result.insertId, success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error creating table:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -66,7 +89,7 @@ export async function PUT(request: NextRequest) {
     const { id, status, monthlyPayment } = body;
 
     const updates: string[] = [];
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (status) {
       updates.push('status = ?');
@@ -85,9 +108,10 @@ export async function PUT(request: NextRequest) {
     await query(`UPDATE tables SET ${updates.join(', ')} WHERE id = ?`, params);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error updating table:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -104,9 +128,10 @@ export async function DELETE(request: NextRequest) {
     await query('DELETE FROM tables WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error deleting table:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
