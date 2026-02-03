@@ -39,9 +39,23 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
 
-  // Učitaj porudžbine sa API-ja - memoizovano sa useCallback
-  const fetchOrders = useCallback(async () => {
+  // Učitaj porudžbine sa API-ja - memoizovano sa useCallback sa retry logikom
+  const fetchOrders = useCallback(async (retryCount = 0) => {
+    const MAX_RETRIES = 2; // Manje retry-jeva za polling
+    const RETRY_DELAY = 500;
+    
     try {
+      // Kreiraj timeout signal (fallback za starije browsere)
+      let abortController: AbortController | null = null;
+      let timeoutId: NodeJS.Timeout | null = null;
+      
+      if (typeof AbortController !== 'undefined') {
+        abortController = new AbortController();
+        timeoutId = setTimeout(() => {
+          abortController?.abort();
+        }, 8000); // 8 sekundi timeout
+      }
+      
       const response = await fetch('/api/orders', {
         method: 'GET',
         headers: {
@@ -49,11 +63,27 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         },
         cache: 'no-store',
         credentials: 'same-origin',
+        signal: abortController?.signal,
       });
+      
+      // Očisti timeout
+      if (timeoutId) clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to fetch orders:', response.status, response.statusText, errorText);
+        
+        // Retry samo za 5xx greške
+        if (response.status >= 500 && retryCount < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+          return fetchOrders(retryCount + 1);
+        }
+        
+        // Za 4xx greške, ne retry-uj
+        if (response.status < 500) {
+          return;
+        }
+        
         throw new Error(`Failed to fetch orders: ${response.status} ${response.statusText}`);
       }
       
@@ -75,10 +105,26 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
-      console.error('Error fetching orders:', error);
-      console.error('Error details:', errorMessage);
-      if (errorStack) console.error('Error stack:', errorStack);
-      setOrders([]);
+      
+      // Retry samo za network greške
+      if ((errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch') || errorMessage.includes('timeout')) && retryCount < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+        return fetchOrders(retryCount + 1);
+      }
+      
+      const errorName = error instanceof Error ? error.name : '';
+      
+      // Ne loguj grešku ako je samo timeout, abort ili network error (normalno za mobile)
+      if (!errorMessage.includes('timeout') && 
+          !errorMessage.includes('Failed to fetch') && 
+          errorName !== 'AbortError') {
+        console.error('Error fetching orders:', error);
+        console.error('Error details:', errorMessage);
+        if (errorStack) console.error('Error stack:', errorStack);
+      }
+      
+      // Ne resetuj orders na prazan array ako je network error (zadrži stare)
+      // setOrders([]); // Komentarisano - zadrži stare porudžbine
     } finally {
       // Orders loaded
     }

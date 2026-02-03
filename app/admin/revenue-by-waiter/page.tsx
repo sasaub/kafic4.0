@@ -40,25 +40,7 @@ export default function RevenueByWaiterPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [revenueByWaiter, setRevenueByWaiter] = useState<Record<number, { username: string; revenue: number; orderCount: number }>>({});
 
-  useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-    }
-  }, [user, router, isLoading]);
-
-  useEffect(() => {
-    if (user && user.role === 'admin') {
-      fetchUsers();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user && user.role === 'admin' && users.length > 0) {
-      fetchOrders();
-    }
-  }, [user, selectedDate, dateFrom, dateTo, filterType, users, fetchOrders]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Greška pri učitavanju korisnika');
@@ -70,50 +52,76 @@ export default function RevenueByWaiterPage() {
     } catch (error) {
       console.error('Error fetching users:', error);
     }
-  };
+  }, []);
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      const response = await fetch('/api/orders');
-      if (!response.ok) throw new Error('Greška pri učitavanju porudžbina');
-      const data = await response.json();
-      const allOrders = Array.isArray(data) ? data : [];
-      
-      // Filtriraj samo potvrđene porudžbine
-      let filteredOrders = allOrders.filter((o: Order) => o.status === 'Potvrđeno');
-      
-      // Filtriraj po datumu
-      if (filterType === 'day') {
-        filteredOrders = filteredOrders.filter((o: Order) => o.date === selectedDate);
-      } else {
-        filteredOrders = filteredOrders.filter(
-          (o: Order) => o.date >= dateFrom && o.date <= dateTo
-        );
-      }
-      
-      setOrders(filteredOrders);
-      
-      // Grupisi po konobaru
-      const revenue: Record<number, { username: string; revenue: number; orderCount: number }> = {};
-      
-      filteredOrders.forEach((order: Order) => {
-        const waiterId = order.waiter_id || 0; // Ako nema waiter_id, grupiši pod "Nepoznato"
-        const waiter = users.find(u => u.id === waiterId);
-        const username = waiter ? waiter.username : 'Nepoznato';
-        
-        if (!revenue[waiterId]) {
-          revenue[waiterId] = { username, revenue: 0, orderCount: 0 };
-        }
-        
-        revenue[waiterId].revenue += order.total;
-        revenue[waiterId].orderCount += 1;
-      });
-      
-      setRevenueByWaiter(revenue);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
+  useEffect(() => {
+    if (!isLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
     }
-  }, [selectedDate, dateFrom, dateTo, filterType, users]);
+  }, [user, router, isLoading]);
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      fetchUsers();
+    }
+  }, [user, fetchUsers]);
+
+  useEffect(() => {
+    if (user && user.role === 'admin' && users.length > 0) {
+      const loadOrders = async () => {
+        try {
+          const response = await fetch('/api/orders');
+          if (!response.ok) throw new Error('Greška pri učitavanju porudžbina');
+          const data = await response.json();
+          const allOrders = Array.isArray(data) ? data : [];
+          
+          // Filtriraj samo potvrđene porudžbine
+          let filteredOrders = allOrders.filter((o: Order) => o.status === 'Potvrđeno');
+          
+          // Filtriraj po datumu
+          if (filterType === 'day') {
+            filteredOrders = filteredOrders.filter((o: Order) => {
+              const orderDate = typeof o.date === 'string' && o.date.includes('T') 
+                ? o.date.split('T')[0] 
+                : o.date;
+              return orderDate === selectedDate;
+            });
+          } else {
+            filteredOrders = filteredOrders.filter((o: Order) => {
+              const orderDate = typeof o.date === 'string' && o.date.includes('T') 
+                ? o.date.split('T')[0] 
+                : o.date;
+              return orderDate >= dateFrom && orderDate <= dateTo;
+            });
+          }
+          
+          setOrders(filteredOrders);
+          
+          // Grupisi po konobaru
+          const revenue: Record<number, { username: string; revenue: number; orderCount: number }> = {};
+          
+          filteredOrders.forEach((order: Order) => {
+            const waiterId = order.waiter_id || 0; // Ako nema waiter_id, grupiši pod "Nepoznato"
+            const waiter = users.find(u => u.id === waiterId);
+            const username = waiter ? waiter.username : 'Nepoznato';
+            
+            if (!revenue[waiterId]) {
+              revenue[waiterId] = { username, revenue: 0, orderCount: 0 };
+            }
+            
+            revenue[waiterId].revenue += order.total;
+            revenue[waiterId].orderCount += 1;
+          });
+          
+          setRevenueByWaiter(revenue);
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+        }
+      };
+      
+      loadOrders();
+    }
+  }, [user, selectedDate, dateFrom, dateTo, filterType, users]);
 
   if (isLoading) {
     return (

@@ -161,8 +161,6 @@ export async function printToNetworkPrinter(
     // Većina mrežnih štampača podržava raw printing na portu 9100
     const url = `http://${settings.ipAddress}:${settings.port || 9100}`;
     
-    console.log('Attempting to print to network printer:', url);
-    
     // Koristimo fetch sa POST zahtevom za raw printing
     // Napomena: Browser ne dozvoljava direktno slanje na mrežni štampač zbog CORS-a
     // no-cors mode ne dozvoljava čitanje response-a, ali pokušaj se šalje
@@ -178,7 +176,6 @@ export async function printToNetworkPrinter(
       
       // Sa no-cors mode, ne možemo proveriti response, ali pokušaj je poslat
       // Pretpostavljamo da je uspešno ako nema greške
-      console.log('Print request sent (no-cors mode - cannot verify success)');
       return true;
     } catch (fetchError) {
       // Ako fetch baca grešku, to znači da zahtev nije poslat

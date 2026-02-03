@@ -53,9 +53,6 @@ async function ensureWaiterIdColumn() {
     
     if (!Array.isArray(columns) || columns.length === 0) {
       // Kolona ne postoji, dodaj je
-      console.log('waiter_id kolona ne postoji, dodajem je...');
-      
-      // Prvo dodaj kolonu
       await query(`ALTER TABLE orders ADD COLUMN waiter_id INT NULL`);
       
       // Zatim dodaj foreign key ako ne postoji
@@ -71,15 +68,11 @@ async function ensureWaiterIdColumn() {
           console.error('Error adding foreign key:', fkError);
         }
       }
-      
-      console.log('waiter_id kolona je uspešno dodata');
     }
   } catch (error) {
     // Ako već postoji kolona, ignoriši grešku
     const mysqlError = error as MySQLError;
-    if (mysqlError.code === 'ER_DUP_FIELDNAME') {
-      console.log('waiter_id kolona već postoji');
-    } else {
+    if (mysqlError.code !== 'ER_DUP_FIELDNAME') {
       console.error('Error checking/adding waiter_id column:', error);
     }
   }
@@ -142,15 +135,6 @@ export async function POST(request: NextRequest) {
       const total = parseFloat(String(order.total)) || 0;
       const tableName = String(order.table_name || '');
       
-      console.log('Creating waiter order with params:', {
-        table_name: tableName,
-        total: total,
-        time: time,
-        date: date,
-        priority: priority,
-        destination: 'waiter'
-      });
-      
       // SQL upit: 7 kolona, ali status i destination su hardkodovani, tako da treba 6 parametara
       // table_name=?, total=?, status='Potvrđeno' (hardkodovano), time=?, date=?, priority=?, destination='waiter' (hardkodovano), waiter_id=?
       const waiterOrderResult = await query(
@@ -168,15 +152,6 @@ export async function POST(request: NextRequest) {
         const itemPrice = parseFloat(String(item.price)) || 0;
         const itemCategory = item.category ? String(item.category) : null;
         const itemComment = item.comment ? String(item.comment) : null;
-        
-        console.log('Inserting order item:', {
-          order_id: waiterOrderId,
-          name: itemName,
-          quantity: itemQuantity,
-          price: itemPrice,
-          category: itemCategory,
-          comment: itemComment
-        });
         
         await query(
           `INSERT INTO order_items (order_id, name, quantity, price, category, comment) 

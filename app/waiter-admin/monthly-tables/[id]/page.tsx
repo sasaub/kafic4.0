@@ -73,11 +73,6 @@ export default function MonthlyTableDetailPage() {
            tableNumber.includes(orderTable.replace('sto ', '').trim());
   });
   
-  // Debug log za proveru
-  console.log('Table:', table.number);
-  console.log('All orders:', orders.map(o => ({ id: o.id, table: o.table })));
-  console.log('Filtered orders:', tableOrders.map(o => ({ id: o.id, table: o.table })));
-  
   // Izračunaj ukupan iznos porudžbina
   const totalOrdersAmount = tableOrders.reduce((sum, order) => sum + order.total, 0);
   

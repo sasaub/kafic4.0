@@ -71,15 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      console.log('AuthContext: Attempting login for:', username);
-      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      
-      console.log('AuthContext: Login response status:', response.status);
       
       if (!response.ok) {
         let errorData;
@@ -93,7 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const userData = await response.json();
-      console.log('AuthContext: Login successful, user data:', userData);
       
       // Proveri da li userData ima sve potrebne polja
       if (!userData || !userData.id || !userData.username || !userData.role) {

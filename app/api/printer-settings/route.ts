@@ -25,8 +25,6 @@ async function ensurePrinterSettingsTable() {
     
     if (!Array.isArray(tables) || tables.length === 0) {
       // Tabela ne postoji, kreiraj je
-      console.log('printer_settings tabela ne postoji, kreiram je...');
-      
       await query(`
         CREATE TABLE printer_settings (
           id INT PRIMARY KEY AUTO_INCREMENT,
@@ -42,8 +40,6 @@ async function ensurePrinterSettingsTable() {
         INSERT INTO printer_settings (id, ip_address, port, enabled) 
         VALUES (1, '', 9100, FALSE)
       `);
-      
-      console.log('printer_settings tabela je uspešno kreirana');
     } else {
       // Proveri da li postoji red sa id=1
       const existing = await query(

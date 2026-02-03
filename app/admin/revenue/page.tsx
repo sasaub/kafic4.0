@@ -48,23 +48,6 @@ export default function RevenuePage() {
     );
   }
 
-  // DEBUG: Prikaži sve porudžbine
-  console.log('=== REVENUE PAGE DEBUG ===');
-  console.log('Total orders from API:', orders.length);
-  console.log('Today date:', today);
-  console.log('Selected date:', selectedDate);
-  console.log('Filter type:', filterType);
-  
-  // Prikaži SVE porudžbine i njihove statuse
-  console.log('\n=== ALL ORDERS ===');
-  orders.forEach(o => {
-    let orderDate = o.date;
-    if (orderDate && typeof orderDate === 'string' && orderDate.includes('T')) {
-      orderDate = orderDate.split('T')[0];
-    }
-    console.log(`Order ${o.id}: status="${o.status}", date="${orderDate}", table="${o.table}", total=${o.total}`);
-  });
-  
   // Prikaži porudžbine za današnji datum (bilo koji status)
   const todayOrders = orders.filter(o => {
     let orderDate = o.date;
@@ -72,11 +55,6 @@ export default function RevenuePage() {
       orderDate = orderDate.split('T')[0];
     }
     return orderDate === today;
-  });
-  console.log(`\n=== ORDERS FOR TODAY (${today}) ===`);
-  console.log(`Count: ${todayOrders.length}`);
-  todayOrders.forEach(o => {
-    console.log(`  Order ${o.id}: status="${o.status}", table="${o.table}", total=${o.total}`);
   });
   
   // Prikaži sve datume koji imaju "Potvrđeno" porudžbine
@@ -92,25 +70,12 @@ export default function RevenuePage() {
     .filter((date, index, self) => self.indexOf(date) === index)
     .sort()
     .reverse();
-  console.log('\nAvailable dates with "Potvrđeno" orders:', confirmedOrdersDates);
 
   // Filtriraj samo porudžbine sa statusom "Potvrđeno" (samo konobar i konobar-admin potvrđuju)
   // Datumi iz baze su u YYYY-MM-DD formatu, selectedDate je takođe u YYYY-MM-DD formatu
-  console.log('=== FILTERING ORDERS ===');
-  console.log('Selected date:', selectedDate);
-  console.log('Today date:', today);
-  console.log('Total orders:', orders.length);
-  
   const filteredOrders = orders.filter(o => {
-    console.log(`\nOrder ${o.id}:`);
-    console.log(`  - Status: "${o.status}"`);
-    console.log(`  - Date (raw): "${o.date}" (type: ${typeof o.date})`);
-    console.log(`  - Table: "${o.table}"`);
-    console.log(`  - Total: ${o.total}`);
-    
     // Status mora biti "Potvrđeno"
     if (o.status !== 'Potvrđeno') {
-      console.log(`  → Filtered out: status is "${o.status}", not "Potvrđeno"`);
       return false;
     }
     
@@ -118,41 +83,22 @@ export default function RevenuePage() {
     let orderDate = o.date;
     if (orderDate && typeof orderDate === 'string' && orderDate.includes('T')) {
       orderDate = orderDate.split('T')[0];
-      console.log(`  - Date (after T split): "${orderDate}"`);
     }
     
     // Proveri da li je orderDate string
     if (typeof orderDate !== 'string') {
-      console.warn(`  → Filtered out: invalid date type:`, typeof orderDate);
       return false;
     }
     
     let dateMatch = false;
     if (filterType === 'day') {
       dateMatch = orderDate === selectedDate;
-      console.log(`  - Date match: "${orderDate}" === "${selectedDate}" = ${dateMatch}`);
     } else {
       dateMatch = orderDate >= dateFrom && orderDate <= dateTo;
-      console.log(`  - Date match (period): "${orderDate}" >= "${dateFrom}" && "${orderDate}" <= "${dateTo}" = ${dateMatch}`);
-    }
-    
-    if (dateMatch) {
-      console.log(`  → ✓ INCLUDED`);
-    } else {
-      console.log(`  → Filtered out: date doesn't match`);
     }
     
     return dateMatch;
   });
-
-  console.log('\n=== FILTERING RESULTS ===');
-  console.log('Filtered orders count:', filteredOrders.length);
-  console.log('Filtered orders:', filteredOrders.map(o => ({
-    id: o.id,
-    date: o.date,
-    table: o.table,
-    total: o.total
-  })));
 
   // Grupisi po ID-u da izbegnemo duplikate (ako postoji kopija porudžbine)
   // Prikaži sve potvrđene porudžbine, nebitno da li je waiter ili waiter-admin potvrdio
@@ -164,9 +110,6 @@ export default function RevenuePage() {
   }, {} as Record<number, typeof filteredOrders[0]>);
   
   const uniqueOrders = Object.values(ordersById);
-
-  console.log('Unique orders (by table):', uniqueOrders.length);
-  console.log('Unique orders:', uniqueOrders);
 
   // Računaj zaradu - suma svih uniqueOrders
   const totalRevenue = uniqueOrders.reduce((sum, o) => sum + o.total, 0);

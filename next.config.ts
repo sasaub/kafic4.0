@@ -20,6 +20,23 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
+  // Sakrij Fast Refresh poruke u konzoli
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // Sakrij Fast Refresh poruke
+      config.infrastructureLogging = {
+        level: 'error',
+      };
+    }
+    return config;
+  },
+  // Sakrij Fast Refresh overlay poruke
+  reactStrictMode: true,
+  // Onemogući Fast Refresh overlay u development modu
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
 };
 
 export default nextConfig;

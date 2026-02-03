@@ -79,44 +79,6 @@ export default function KitchenPage() {
     [view, newOrders, allOrders]
   );
 
-  // Debug - prikaži sve porudžbine u konzoli
-  useEffect(() => {
-    console.log('=== KITCHEN PAGE DEBUG ===');
-    console.log('All orders count:', orders.length);
-    console.log('Kitchen orders count:', kitchenOrders.length);
-    console.log('New kitchen orders count:', newOrders.length);
-    console.log('Display orders count:', displayOrders.length);
-    console.log('All orders:', orders.map(o => ({
-      id: o.id,
-      destination: o.destination,
-      status: o.status,
-      table: o.table,
-      itemsCount: o.items.length,
-      items: o.items.map(i => i.name)
-    })));
-    console.log('Kitchen orders:', kitchenOrders.map(o => ({
-      id: o.id,
-      destination: o.destination,
-      status: o.status,
-      table: o.table,
-      itemsCount: o.items.length
-    })));
-    console.log('New kitchen orders:', newOrders.map(o => ({
-      id: o.id,
-      destination: o.destination,
-      status: o.status,
-      table: o.table,
-      itemsCount: o.items.length
-    })));
-    console.log('Display orders:', displayOrders.map(o => ({
-      id: o.id,
-      destination: o.destination,
-      status: o.status,
-      table: o.table,
-      itemsCount: o.items.length
-    })));
-    console.log('=== END KITCHEN PAGE DEBUG ===');
-  }, [orders, kitchenOrders, newOrders, displayOrders]);
 
   const handleClearAll = useCallback(() => {
     const today = new Date().toISOString().split('T')[0];

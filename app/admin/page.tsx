@@ -71,35 +71,6 @@ export default function AdminPage() {
     return date;
   };
   
-  // Debug log
-  useEffect(() => {
-    console.log('Admin page - orders:', orders);
-    console.log('Admin page - orders count:', orders.length);
-    console.log('Today date:', today);
-    // Proveri porudžbine 59 i 69
-    const order59 = orders.find(o => o.id === 59);
-    const order69 = orders.find(o => o.id === 69);
-    if (order59) {
-      console.log('Order 59:', {
-        id: order59.id,
-        date: order59.date,
-        normalizedDate: normalizeDate(order59.date),
-        status: order59.status,
-        destination: order59.destination,
-        matchesToday: normalizeDate(order59.date) === today
-      });
-    }
-    if (order69) {
-      console.log('Order 69:', {
-        id: order69.id,
-        date: order69.date,
-        normalizedDate: normalizeDate(order69.date),
-        status: order69.status,
-        destination: order69.destination,
-        matchesToday: normalizeDate(order69.date) === today
-      });
-    }
-  }, [orders, today]);
   
   // Izračunaj statistike koristeći useMemo da se ažuriraju kada se orders promene
   const stats = useMemo(() => {
@@ -141,7 +112,7 @@ export default function AdminPage() {
       return orderDate === today && o.status === 'Potvrđeno';
     });
     
-    // Grupisi po ID-u da izbegnemo duplikate
+    // Grupisi po ID-u da izbegnemo duplikate (ako postoji kopija porudžbine)
     const uniqueTodayOrders = allTodayOrdersRaw.reduce((acc, order) => {
       if (!acc[order.id]) {
         acc[order.id] = order;
@@ -165,13 +136,31 @@ export default function AdminPage() {
     
     // Ukupna zarada = suma svih porudžbina sa statusom "Potvrđeno" za danas
     const totalRevenueToday = uniqueTodayOrdersArray.reduce((sum, o) => sum + o.total, 0);
+    
+    // Ukupno narudžbi danas = SVE porudžbine za danas (bez obzira na status i destination)
+    // Uključi sve porudžbine za danas i ukloni duplikate po ID-u
+    const allTodayOrdersForStats = orders.filter(o => {
+      const orderDate = normalizeDate(o.date);
+      return orderDate === today;
+    });
+    
+    // Grupisi po ID-u da uklonimo duplikate
+    const uniqueAllTodayOrders = allTodayOrdersForStats.reduce((acc, order) => {
+      if (!acc[order.id]) {
+        acc[order.id] = order;
+      }
+      return acc;
+    }, {} as Record<number, typeof allTodayOrdersForStats[0]>);
+    
+    const totalTodayOrders = Object.values(uniqueAllTodayOrders);
 
     return {
       activeOrders,
       deliveredToday,
       totalRevenueToday,
       uniqueTodayOrdersArray,
-      todayOrders
+      todayOrders,
+      totalTodayOrders
     };
   }, [orders, today]);
 
@@ -179,36 +168,42 @@ export default function AdminPage() {
     { title: 'Aktivne narudžbe', value: stats.activeOrders.length.toString() },
     { title: 'Zarada danas', value: `${stats.totalRevenueToday.toLocaleString()} RSD` },
     { title: 'Dostavljeno danas', value: stats.deliveredToday.length.toString() },
-    { title: 'Ukupno narudžbi danas', value: stats.uniqueTodayOrdersArray.length.toString() },
+    { title: 'Ukupno narudžbi danas', value: stats.totalTodayOrders.length.toString() },
   ], [stats]);
 
-  // Poslednje narudžbine - prikaži sve potvrđene porudžbine (najnovije prvo)
-  const recentOrders = useMemo(() => stats.todayOrders
-    .sort((a, b) => {
-      // Sortiraj po datumu i vremenu (najnovije prvo)
-      const dateA = new Date(a.date + 'T' + a.time);
-      const dateB = new Date(b.date + 'T' + b.time);
-      if (dateA.getTime() !== dateB.getTime()) {
-        return dateB.getTime() - dateA.getTime();
+  // Najprodavanije jela - analiziraj sve porudžbine za danas
+  const topSellingItems = useMemo(() => {
+    // Uzmi sve porudžbine za danas (bez obzira na status)
+    const allTodayOrders = orders.filter(o => {
+      const orderDate = normalizeDate(o.date);
+      return orderDate === today;
+    });
+
+    // Grupisi sve stavke po imenu i saberi količine
+    const itemCounts: Record<string, { name: string; quantity: number; revenue: number }> = {};
+    
+    allTodayOrders.forEach(order => {
+      if (order.items && order.items.length > 0) {
+        order.items.forEach(item => {
+          const itemName = item.name;
+          if (!itemCounts[itemName]) {
+            itemCounts[itemName] = {
+              name: itemName,
+              quantity: 0,
+              revenue: 0
+            };
+          }
+          itemCounts[itemName].quantity += item.quantity || 1;
+          itemCounts[itemName].revenue += (item.price || 0) * (item.quantity || 1);
+        });
       }
-      // Ako je isti datum, sortiraj po vremenu
-      const timeA = a.time.split(':').map(Number);
-      const timeB = b.time.split(':').map(Number);
-      if (timeA[0] !== timeB[0]) return timeB[0] - timeA[0];
-      return timeB[1] - timeA[1];
-    })
-    .slice(0, 10)
-    .map(order => ({
-      id: order.id,
-      table: order.table,
-      items: order.items && order.items.length > 0 
-        ? order.items.map(item => `${item.name} x${item.quantity}`).join(', ')
-        : 'Nema stavki',
-      total: order.total,
-      status: order.status,
-      time: order.time,
-      waiter_id: order.waiter_id || null
-    })), [stats]);
+    });
+
+    // Sortiraj po količini (najprodavanije prvo)
+    return Object.values(itemCounts)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10); // Top 10
+  }, [orders, today]);
 
   // Uslovni return-ovi MORAJU biti posle svih hook-ova
   if (isLoading) {
@@ -485,49 +480,43 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Poslednje narudžbe */}
+        {/* Najprodavanije jela */}
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold mb-4">Poslednje narudžbe</h2>
+          <h2 className="text-2xl font-bold mb-4">Najprodavanije jela danas</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left">ID</th>
-                  <th className="px-4 py-3 text-left">Vreme</th>
-                  <th className="px-4 py-3 text-left">Sto</th>
-                  <th className="px-4 py-3 text-left">Stavke</th>
-                  <th className="px-4 py-3 text-left">Ukupno</th>
-                  <th className="px-4 py-3 text-left">Kreirao</th>
-                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">#</th>
+                  <th className="px-4 py-3 text-left">Naziv jela</th>
+                  <th className="px-4 py-3 text-left">Količina</th>
+                  <th className="px-4 py-3 text-left">Ukupna zarada</th>
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.length === 0 ? (
+                {topSellingItems.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                      Nema narudžbi danas
+                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                      Nema prodaje danas
                     </td>
                   </tr>
                 ) : (
-                  recentOrders.map(order => (
-                    <tr key={order.id} className="border-t">
-                      <td className="px-4 py-3">#{order.id}</td>
-                      <td className="px-4 py-3 text-gray-600">{order.time}</td>
-                      <td className="px-4 py-3">{order.table}</td>
-                      <td className="px-4 py-3 text-sm">{order.items}</td>
-                      <td className="px-4 py-3 font-semibold">{order.total} RSD</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {getWaiterName(order.waiter_id)}
-                      </td>
+                  topSellingItems.map((item, index) => (
+                    <tr key={item.name} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3">
-                        <span className={`px-3 py-1 rounded-full text-sm ${
-                          order.status === 'Dostavljeno' ? 'bg-gray-100 text-gray-800' :
-                          order.status === 'Spremno' ? 'bg-gray-100 text-gray-800' :
-                          order.status === 'U pripremi' ? 'bg-gray-100 text-gray-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {order.status}
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white"
+                             style={{ backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : '#2B2E34' }}>
+                          {index + 1}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-800">{item.name}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                          {item.quantity} {item.quantity === 1 ? 'komad' : 'komada'}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-800">
+                        {item.revenue.toLocaleString()} RSD
                       </td>
                     </tr>
                   ))

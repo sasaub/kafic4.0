@@ -27,18 +27,6 @@ export default function AdminUsersPage() {
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-    }
-  }, [user, router, isLoading]);
-
-  useEffect(() => {
-    if (user && user.role === 'admin') {
-      fetchUsers();
-    }
-  }, [user, fetchUsers]);
-
   const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/users');
@@ -50,6 +38,18 @@ export default function AdminUsersPage() {
       showToast('Greška pri učitavanju korisnika', 'error');
     }
   }, [showToast]);
+
+  useEffect(() => {
+    if (!isLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+    }
+  }, [user, router, isLoading]);
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      fetchUsers();
+    }
+  }, [user, fetchUsers]);
 
   const handleAddUser = async () => {
     if (!newUser.username || !newUser.password) {

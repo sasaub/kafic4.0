@@ -4,9 +4,12 @@ import { query } from '@/lib/db';
 interface MenuItemRow {
   id: number;
   name: string;
+  name_en: string | null;
   description: string | null;
+  description_en: string | null;
   price: number | string;
   category_name: string;
+  category_name_en: string | null;
   category_type: string;
 }
 
@@ -25,12 +28,38 @@ interface MySQLError extends Error {
 // GET - Vrati sve meni stavke
 export async function GET() {
   try {
-    const items = await query(`
-      SELECT m.*, c.name as category_name, c.type as category_type
-      FROM menu_items m
-      JOIN categories c ON m.category_id = c.id
-      ORDER BY c.type, c.name, m.name
-    `) as MenuItemRow[];
+    // Proveri da li postoje engleske kolone
+    const hasEnglishColumns = await query(`
+      SELECT COUNT(*) as count
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'menu_items'
+      AND COLUMN_NAME = 'name_en'
+    `) as Array<{ count: number }>;
+    
+    const hasEnglish = hasEnglishColumns[0]?.count > 0;
+    
+    let items: MenuItemRow[];
+    
+    if (hasEnglish) {
+      // Ako postoje engleske kolone, uključi ih u query
+      items = await query(`
+        SELECT m.*, m.name_en, m.description_en, 
+               c.name as category_name, c.name_en as category_name_en, c.type as category_type
+        FROM menu_items m
+        JOIN categories c ON m.category_id = c.id
+        ORDER BY c.type, c.name, m.name
+      `) as MenuItemRow[];
+    } else {
+      // Ako ne postoje, koristi samo srpske nazive
+      items = await query(`
+        SELECT m.*, NULL as name_en, NULL as description_en,
+               c.name as category_name, NULL as category_name_en, c.type as category_type
+        FROM menu_items m
+        JOIN categories c ON m.category_id = c.id
+        ORDER BY c.type, c.name, m.name
+      `) as MenuItemRow[];
+    }
 
     // Ako nema rezultata ili je greška, vrati prazan array
     if (!items || !Array.isArray(items)) {
@@ -40,9 +69,12 @@ export async function GET() {
     const menuItems = items.map((item: MenuItemRow) => ({
       id: item.id,
       name: item.name,
+      name_en: item.name_en || null,
       description: item.description || '',
+      description_en: item.description_en || null,
       price: parseFloat(String(item.price)),
       category: item.category_name,
+      category_en: item.category_name_en || null,
     }));
 
     return NextResponse.json(menuItems);
@@ -50,7 +82,6 @@ export async function GET() {
     // Ako tabela ne postoji, vrati prazan array umesto greške
     const mysqlError = error as MySQLError;
     if (mysqlError.code === 'ER_NO_SUCH_TABLE' || mysqlError.code === '42S02') {
-      console.log('Menu items table does not exist yet, returning empty array');
       return NextResponse.json([]);
     }
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

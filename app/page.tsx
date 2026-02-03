@@ -3,7 +3,7 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100">
       <div className="text-center px-6">
         <h1 className="text-6xl font-bold text-gray-900 mb-4">
-          QR Restoran
+          MeniKod
         </h1>
         <p className="text-xl text-gray-600 mb-8">
           Dobrodošli u moderan sistem za naručivanje putem QR koda

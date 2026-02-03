@@ -47,9 +47,6 @@ async function ensureWaiterIdColumn() {
     
     if (!Array.isArray(columns) || columns.length === 0) {
       // Kolona ne postoji, dodaj je
-      console.log('waiter_id kolona ne postoji, dodajem je...');
-      
-      // Prvo dodaj kolonu
       await query(`ALTER TABLE orders ADD COLUMN waiter_id INT NULL`);
       
       // Zatim dodaj foreign key ako ne postoji
@@ -65,15 +62,11 @@ async function ensureWaiterIdColumn() {
           console.error('Error adding foreign key:', fkError);
         }
       }
-      
-      console.log('waiter_id kolona je uspešno dodata');
     }
   } catch (error) {
     // Ako već postoji kolona, ignoriši grešku
     const mysqlError = error as MySQLError;
-    if (mysqlError.code === 'ER_DUP_FIELDNAME') {
-      console.log('waiter_id kolona već postoji');
-    } else {
+    if (mysqlError.code !== 'ER_DUP_FIELDNAME') {
       console.error('Error checking/adding waiter_id column:', error);
     }
   }
@@ -117,7 +110,6 @@ export async function GET(request: NextRequest) {
       // Ako tabela ne postoji ili nema podataka, vrati prazan array
       const mysqlError = dbError as MySQLError;
       if (mysqlError.code === 'ER_NO_SUCH_TABLE' || mysqlError.code === '42S02') {
-        console.log('Orders table does not exist yet, returning empty array');
         return NextResponse.json([]);
       }
       throw dbError;
@@ -147,9 +139,6 @@ export async function GET(request: NextRequest) {
         // Formatiraj datum - MySQL vraća DATE kao string 'YYYY-MM-DD' ili Date objekat
         let formattedDate = order.date;
         
-        // Debug log
-        console.log(`Order ${order.id} - Raw date from DB:`, order.date, 'Type:', typeof order.date, 'Is Date:', order.date instanceof Date);
-        
         if (order.date instanceof Date) {
           // Ako je Date objekat, koristi lokalno vreme (ne UTC)
           const year = order.date.getFullYear();
@@ -169,8 +158,6 @@ export async function GET(request: NextRequest) {
             formattedDate = order.date;
           }
         }
-        
-        console.log(`Order ${order.id} - Formatted date:`, formattedDate);
 
         return {
           id: order.id,

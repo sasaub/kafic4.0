@@ -102,7 +102,6 @@ export default function WaiterAdminPage() {
         const success = await printToNetworkPrinter(order);
         if (!success) {
           // Fallback na browser print
-          console.log('Network print failed, using browser print');
           printViaBrowser(order);
         } else {
           // Čak i ako je success true, možda štampač nije primio podatke
