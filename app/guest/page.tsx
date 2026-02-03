@@ -111,23 +111,27 @@ function GuestPageContent() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA' }}>
       {/* Header */}
-      <div className="bg-orange-600 text-white p-6 sticky top-0 z-10">
+      <div className="text-white p-6 sticky top-0 z-10" style={{ backgroundColor: '#1F2937' }}>
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <h1 className="text-3xl font-bold">{t.menu}</h1>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-orange-100">{t.tableNumber}</span>
+              <span style={{ color: '#9CA3AF' }}>{t.tableNumber}</span>
               <input
                 type="text"
                 value={tableNumber}
                 onChange={(e) => setTableNumber(e.target.value)}
-                className="w-16 px-2 py-1 rounded bg-orange-700 text-white border-orange-500"
+                className="w-16 px-2 py-1 rounded text-white"
+                style={{ backgroundColor: '#374151', borderColor: '#4B5563' }}
               />
             </div>
           </div>
           <button
             onClick={toggleLanguage}
-            className="px-4 py-2 rounded-lg bg-orange-700 hover:bg-orange-800 transition-colors text-sm font-semibold flex items-center gap-2"
+            className="px-4 py-2 rounded-lg transition-colors text-sm font-semibold flex items-center gap-2"
+            style={{ backgroundColor: '#1F7A5A' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#166B4F'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1F7A5A'}
             title={language === 'sr' ? 'Switch to English' : 'Prebaci na srpski'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -153,7 +157,10 @@ function GuestPageContent() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={t.search}
-            className="w-full px-4 py-3 border-2 border-orange-200 rounded-lg focus:border-orange-500 focus:outline-none"
+            className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+            style={{ borderColor: '#E5E7EB' }}
+            onFocus={(e) => e.currentTarget.style.borderColor = '#1F7A5A'}
+            onBlur={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
           />
         </div>
 
@@ -182,9 +189,10 @@ function GuestPageContent() {
                 onClick={() => setSelectedCategory(category)}
                 className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
                   isSelected
-                    ? 'bg-orange-600 text-white'
+                    ? 'text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
                 }`}
+                style={isSelected ? { backgroundColor: '#1F7A5A' } : {}}
               >
                 {displayCategory}
               </button>
@@ -211,14 +219,17 @@ function GuestPageContent() {
                         <div>
                           <h3 className="font-semibold text-lg">{translatedItem.name}</h3>
                           {translatedItem.description && (
-                            <p className="text-gray-600 text-sm">{translatedItem.description}</p>
+                            <p className="text-sm" style={{ color: '#9CA3AF' }}>{translatedItem.description}</p>
                           )}
                         </div>
-                        <span className="text-orange-600 font-bold">{item.price} RSD</span>
+                        <span className="font-bold" style={{ color: '#1F7A5A' }}>{item.price} RSD</span>
                       </div>
                       <button
                         onClick={() => addToCart(item)}
-                        className="w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                        className="w-full text-white py-2 rounded-lg transition-colors"
+                        style={{ backgroundColor: '#1F7A5A' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#166B4F'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1F7A5A'}
                       >
                         {t.addToCart}
                       </button>
@@ -234,7 +245,7 @@ function GuestPageContent() {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-bold mb-4">{t.yourOrder}</h2>
               {cart.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">{t.cartEmpty}</p>
+                <p className="text-center py-8" style={{ color: '#9CA3AF' }}>{t.cartEmpty}</p>
               ) : (
                 <>
                   <div className="space-y-2 mb-4">
