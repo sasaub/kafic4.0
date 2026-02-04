@@ -86,7 +86,7 @@ export default function PrinterSettingsPage() {
       };
 
       // Importujemo funkciju za štampanje
-      const { printToNetworkPrinter, printViaBrowser } = await import('../../../utils/printer');
+      const { printToNetworkPrinter, printViaBrowser } = await import('../../utils/printer');
       
       const success = await printToNetworkPrinter(testOrder);
       
