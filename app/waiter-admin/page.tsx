@@ -124,24 +124,22 @@ UKUPNO:                    ${order.total} RSD
     
     if (printerSettings && printerSettings.enabled && printerSettings.ipAddress) {
       try {
-        // Pokušaj mrežno štampanje
+        // Štampaj samo preko mrežnog štampača
         const success = await printToNetworkPrinter({
           type: 'order',
           content
         });
         
-        if (!success) {
-          // Fallback na browser print
-          printViaBrowser(content);
+        if (success) {
+          console.log('Štampanje uspešno poslato na mrežni štampač');
+        } else {
+          console.error('Mrežno štampanje nije uspelo');
         }
       } catch (error) {
-        console.error('Error in print process:', error);
-        // Fallback na browser print
-        printViaBrowser(content);
+        console.error('Greška pri štampanju:', error);
       }
     } else {
-      // Koristi browser print ako mrežni štampač nije podešen
-      printViaBrowser(content);
+      console.warn('Mrežni štampač nije podešen ili nije omogućen');
     }
   };
 

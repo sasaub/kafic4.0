@@ -52,17 +52,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pošalji podatke na mrežni štampač
-    const success = await sendToNetworkPrinter(ipAddress, port, content);
+    // Dodaj posao u queue umesto direktnog štampanja
+    const payload = JSON.stringify({ type, content });
+    
+    await query(
+      `INSERT INTO print_jobs (status, attempts, payload_json, created_at, updated_at, next_run_at) 
+       VALUES ('queued', 0, ?, NOW(), NOW(), NOW())`,
+      [payload]
+    );
 
-    if (success) {
-      return NextResponse.json({ ok: true });
-    } else {
-      return NextResponse.json(
-        { error: 'Failed to send to printer' },
-        { status: 500 }
-      );
-    }
+    console.log('Print job added to queue');
+
+    return NextResponse.json({ ok: true, message: 'Print job queued' });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Print API error:', error);

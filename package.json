@@ -10,7 +10,11 @@
     "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:stop": "pm2 stop qr-restaurant",
     "pm2:restart": "pm2 restart qr-restaurant",
-    "pm2:logs": "pm2 logs qr-restaurant"
+    "pm2:logs": "pm2 logs qr-restaurant",
+    "print-worker": "node scripts/print-worker.js",
+    "pm2:start-worker": "pm2 start scripts/print-worker.js --name print-worker",
+    "pm2:stop-worker": "pm2 stop print-worker",
+    "pm2:restart-worker": "pm2 restart print-worker"
   },
   "dependencies": {
     "dotenv": "^17.2.4",
