@@ -73,29 +73,42 @@ export default function PrinterSettingsPage() {
     setTestResult('Štampanje test stranice...');
 
     try {
-      // Test narudžba
-      const testOrder = {
-        id: 999,
-        table: 'Test Sto',
-        time: new Date().toLocaleTimeString('sr-RS'),
-        items: [
-          { name: 'Test Stavka 1', quantity: 1, price: 100 },
-          { name: 'Test Stavka 2', quantity: 2, price: 200 }
-        ],
-        total: 500
-      };
+      // Kreiraj test sadržaj
+      const testContent = `
+========================================
+        TEST ŠTAMPE
+========================================
+
+QR RESTAURANT
+IP: ${settings.ipAddress}
+PORT: ${settings.port}
+
+----------------------------------------
+Test Stavka 1       1 x 100 = 100 RSD
+Test Stavka 2       2 x 200 = 400 RSD
+----------------------------------------
+
+UKUPNO:                      500 RSD
+
+========================================
+   Ako vidiš ovo - štampa radi!
+========================================
+`;
 
       // Importujemo funkciju za štampanje
       const { printToNetworkPrinter, printViaBrowser } = await import('../../utils/printer');
       
-      const success = await printToNetworkPrinter(testOrder);
+      const success = await printToNetworkPrinter({
+        type: 'test',
+        content: testContent
+      });
       
       if (success) {
         setTestResult('✓ Test štampanje poslato na štampač!');
       } else {
         setTestResult('⚠ Mrežno štampanje nije uspelo. Koristite browser print.');
         // Fallback na browser print
-        setTimeout(() => printViaBrowser(testOrder), 500);
+        setTimeout(() => printViaBrowser(testContent), 500);
       }
     } catch (error) {
       console.error('Test print error:', error);
