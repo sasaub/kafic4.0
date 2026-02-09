@@ -48,11 +48,21 @@ function formatESCPOS(content) {
   const contentBytes = Buffer.from(content, 'utf8');
   commands.push(...contentBytes);
   
-  // Dodaj prazne linije pre sečenja
-  commands.push(0x0A, 0x0A, 0x0A); // Line feeds
+  // Dodaj više praznih linija pre sečenja (da se sadržaj ne iseče prerano)
+  commands.push(0x0A, 0x0A, 0x0A, 0x0A, 0x0A); // 5 line feeds
   
-  // Seči papir (full cut)
-  commands.push(0x1D, 0x56, 0x00); // GS V 0 - Full cut
+  // Pokušaj sa više različitih komandi za sečenje
+  // Komanda 1: GS V 0 - Full cut
+  commands.push(0x1D, 0x56, 0x00);
+  
+  // Komanda 2: GS V 1 - Partial cut (ako full cut ne radi)
+  commands.push(0x1D, 0x56, 0x01);
+  
+  // Komanda 3: ESC i - Full cut (alternativna komanda)
+  commands.push(0x1B, 0x69);
+  
+  // Komanda 4: ESC m - Partial cut (alternativna komanda)
+  commands.push(0x1B, 0x6D);
   
   return Buffer.from(commands);
 }
