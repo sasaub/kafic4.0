@@ -2,6 +2,7 @@
   "name": "MeniKod",
   "short_name": "MeniKod",
   "description": "Sistem za naručivanje hrane putem QR koda u restoranima",
+  "version": "2.0.0",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",

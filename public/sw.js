@@ -1,7 +1,7 @@
 // Service Worker za PWA
 // Next.js će automatski servirati ovaj fajl na /sw.js
 
-const CACHE_NAME = 'qr-restaurant-v1';
+const CACHE_NAME = 'qr-restaurant-v2';
 // Cache-uj samo resurse koji sigurno postoje
 const urlsToCache = [
   '/',
