@@ -42,6 +42,8 @@ export default function WaiterPage() {
   }, []);
 
   const printReceipt = useCallback(async (order: Order) => {
+    console.log('🖨️ printReceipt POZVANA za order:', order.id);
+    
     const receiptContent = `
 ========================================
         Ovo nije fiskalni isecak
@@ -73,7 +75,7 @@ UKUPNO:                    ${order.total} RSD
     `;
 
     try {
-      console.log('Šaljem na /api/print...');
+      console.log('📤 Šaljem na /api/print...');
       const response = await fetch('/api/print', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,9 +85,9 @@ UKUPNO:                    ${order.total} RSD
         })
       });
 
-      console.log('Response status:', response.status);
+      console.log('📥 Response status:', response.status);
       const data = await response.json();
-      console.log('Response data:', data);
+      console.log('📥 Response data:', data);
 
       if (!response.ok) {
         console.error('❌ Print error:', data);
