@@ -166,25 +166,13 @@ UKUPNO:                    ${order.total} RSD
       setSelectedItems([]);
       setShowConfirmDialog(false);
       
-      // Automatski štampaj ako je podešeno
-      const printerSettings = await getPrinterSettings();
-      if (printerSettings && printerSettings.enabled && printerSettings.ipAddress) {
-        // Sačekaj malo da se porudžbina kreira u bazi
-        setTimeout(async () => {
-          // Uzmi najnoviju porudžbinu
-          const ordersResponse = await fetch('/api/orders?status=Novo');
-          const orders = await ordersResponse.json() as Order[];
-          const latestOrder = orders.find((o: Order) => o.table === selectedTable);
-          
-          if (latestOrder) {
-            await handlePrintOrder(latestOrder);
-          }
-        }, 500);
-      }
-      } catch (error) {
-        console.error('Error creating order:', error);
-        showToast('Greška pri kreiranju porudžbine', 'error');
-      }
+      showToast('Porudžbina uspešno kreirana', 'success');
+      
+      // NE štampaj automatski - korisnik će kliknuti "Štampaj" dugme kada želi
+    } catch (error) {
+      console.error('Error creating order:', error);
+      showToast('Greška pri kreiranju porudžbine', 'error');
+    }
   };
 
   const foodCategories = categories.filter(c => c.type === 'Hrana');
