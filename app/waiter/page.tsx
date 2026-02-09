@@ -5,6 +5,7 @@ import { useOrders, Order } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { formatDate } from '../utils/dateFormat';
+import { printToNetworkPrinter, getPrinterSettings } from '../utils/printer';
 
 export default function WaiterPage() {
   const { orders, updateOrderStatus, confirmOrder } = useOrders();
@@ -42,11 +43,10 @@ export default function WaiterPage() {
   }, []);
 
   const printReceipt = useCallback(async (order: Order) => {
-    console.log('🖨️ printReceipt POZVANA za order:', order.id);
-    
-    const receiptContent = `
+    // Formatiraj sadržaj za štampanje (ISTI FORMAT kao konobar-admin)
+    const content = `
 ========================================
-        Ovo nije fiskalni isecak
+        QR RESTAURANT
 ========================================
 
 Narudžba #${order.id}
@@ -58,44 +58,37 @@ Vreme: ${order.time}
 ----------------------------------------
 ${order.items.map(item => `
 ${item.name}
-${item.quantity} x ${item.price} RSD = ${item.quantity * item.price} RSD
+${item.quantity} x ${item.price} RSD = ${item.quantity * item.price} RSD${item.comment ? `\nNapomena: ${item.comment}` : ''}
 `).join('')}
 ----------------------------------------
 
 UKUPNO:                    ${order.total} RSD
 
 ========================================
-        ╔═══════════╗
-        ║   🍽️   ║
-        ║ RESTORAN  ║
-        ╚═══════════╝
-
       Hvala na poverenju!
 ========================================
-    `;
+`;
 
-    try {
-      console.log('📤 Šaljem na /api/print...');
-      const response = await fetch('/api/print', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    const printerSettings = await getPrinterSettings();
+    
+    if (printerSettings && printerSettings.enabled && printerSettings.ipAddress) {
+      try {
+        // Štampaj preko mrežnog štampača (ISTA FUNKCIJA kao konobar-admin)
+        const success = await printToNetworkPrinter({
           type: 'order',
-          content: receiptContent
-        })
-      });
-
-      console.log('📥 Response status:', response.status);
-      const data = await response.json();
-      console.log('📥 Response data:', data);
-
-      if (!response.ok) {
-        console.error('❌ Print error:', data);
-      } else {
-        console.log('✅ Štampanje uspešno poslato!');
+          content
+        });
+        
+        if (success) {
+          console.log('✅ Štampanje uspešno poslato na mrežni štampač');
+        } else {
+          console.error('❌ Mrežno štampanje nije uspelo');
+        }
+      } catch (error) {
+        console.error('❌ Greška pri štampanju:', error);
       }
-    } catch (error) {
-      console.error('❌ Print request failed:', error);
+    } else {
+      console.warn('⚠️ Mrežni štampač nije podešen ili nije omogućen');
     }
   }, []);
 
