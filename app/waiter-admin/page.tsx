@@ -23,7 +23,7 @@ export default function PrinterSettingsPage() {
     try {
       const data = await getPrinterSettings();
       setEnabled(Boolean(data.enabled));
-      setIp(data.ip_address || "");
+      setIp(data.ipAddress || "");
       setPort(data.port || 9100);
     } catch (e) {
       console.error(e);
@@ -40,7 +40,7 @@ export default function PrinterSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           enabled,
-          ip_address: ip,
+          ipAddress: ip,
           port,
         }),
       });
