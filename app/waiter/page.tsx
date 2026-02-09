@@ -41,7 +41,7 @@ export default function WaiterPage() {
     setClearDate(null);
   }, []);
 
-  const printReceipt = useCallback((order: Order) => {
+  const printReceipt = useCallback(async (order: Order) => {
     const receiptContent = `
 ========================================
         Ovo nije fiskalni isecak
@@ -72,20 +72,24 @@ UKUPNO:                    ${order.total} RSD
 ========================================
     `;
 
-    const printWindow = window.open('', '', 'height=600,width=400');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Račun #' + order.id + '</title>');
-      printWindow.document.write('<style>');
-      printWindow.document.write('@page { size: 80mm auto; margin: 0; }');
-      printWindow.document.write('body { font-family: monospace; padding: 20px; }');
-      printWindow.document.write('pre { white-space: pre-wrap; }');
-      printWindow.document.write('@media print { body { margin: 0; } }');
-      printWindow.document.write('</style>');
-      printWindow.document.write('</head><body>');
-      printWindow.document.write('<pre>' + receiptContent + '</pre>');
-      printWindow.document.write('</body></html>');
-      printWindow.document.close();
-      printWindow.print();
+    try {
+      const response = await fetch('/api/print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'order',
+          content: receiptContent
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Print error:', error);
+        alert('Greška pri štampanju: ' + (error.error || 'Nepoznata greška'));
+      }
+    } catch (error) {
+      console.error('Print request failed:', error);
+      alert('Greška pri slanju na štampač');
     }
   }, []);
 

@@ -49,7 +49,7 @@ function formatESCPOS(content) {
   commands.push(...contentBytes);
   
   // Dodaj više praznih linija pre sečenja (da se sadržaj ne iseče prerano)
-  commands.push(0x0A, 0x0A, 0x0A, 0x0A, 0x0A); // 5 line feeds
+  commands.push(0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A); // 8 line feeds
   
   // Pokušaj sa više različitih komandi za sečenje
   // Komanda 1: GS V 0 - Full cut
@@ -63,6 +63,9 @@ function formatESCPOS(content) {
   
   // Komanda 4: ESC m - Partial cut (alternativna komanda)
   commands.push(0x1B, 0x6D);
+  
+  // Dodaj još praznih linija nakon cut komandi
+  commands.push(0x0A, 0x0A);
   
   return Buffer.from(commands);
 }
