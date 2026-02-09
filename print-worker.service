@@ -1,0 +1,19 @@
+[Unit]
+Description=QR Restaurant Print Worker
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/path/to/your/app
+Environment="NODE_ENV=production"
+EnvironmentFile=/path/to/your/app/.env.local
+ExecStart=/usr/bin/node /path/to/your/app/scripts/print-worker.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=print-worker
+
+[Install]
+WantedBy=multi-user.target
