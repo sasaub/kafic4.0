@@ -73,6 +73,7 @@ UKUPNO:                    ${order.total} RSD
     `;
 
     try {
+      console.log('Šaljem na /api/print...');
       const response = await fetch('/api/print', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,14 +83,19 @@ UKUPNO:                    ${order.total} RSD
         })
       });
 
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+
       if (!response.ok) {
-        const error = await response.json();
-        console.error('Print error:', error);
-        alert('Greška pri štampanju: ' + (error.error || 'Nepoznata greška'));
+        console.error('Print error:', data);
+        alert('Greška pri štampanju: ' + (data.error || 'Nepoznata greška'));
+      } else {
+        console.log('Štampanje uspešno poslato!');
       }
     } catch (error) {
       console.error('Print request failed:', error);
-      alert('Greška pri slanju na štampač');
+      alert('Greška pri slanju na štampač: ' + error);
     }
   }, []);
 
