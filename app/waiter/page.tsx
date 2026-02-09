@@ -88,14 +88,12 @@ UKUPNO:                    ${order.total} RSD
       console.log('Response data:', data);
 
       if (!response.ok) {
-        console.error('Print error:', data);
-        alert('Greška pri štampanju: ' + (data.error || 'Nepoznata greška'));
+        console.error('❌ Print error:', data);
       } else {
-        console.log('Štampanje uspešno poslato!');
+        console.log('✅ Štampanje uspešno poslato!');
       }
     } catch (error) {
-      console.error('Print request failed:', error);
-      alert('Greška pri slanju na štampač: ' + error);
+      console.error('❌ Print request failed:', error);
     }
   }, []);
 
