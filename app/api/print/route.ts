@@ -73,6 +73,39 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// ESC/POS komande za Birch POS štampač
+const ESC = '\x1B';
+const GS = '\x1D';
+
+// Funkcija za formatiranje sadržaja sa ESC/POS komandama
+function formatESCPOS(content: string): Buffer {
+  const commands: number[] = [];
+  
+  // Inicijalizuj štampač
+  commands.push(0x1B, 0x40); // ESC @ - Initialize printer
+  
+  // Postavi encoding na UTF-8 / Code page
+  commands.push(0x1B, 0x74, 0x10); // ESC t 16 - Select character code table (WPC1252)
+  
+  // Postavi veličinu fonta (normalna)
+  commands.push(0x1D, 0x21, 0x00); // GS ! 0 - Normal size
+  
+  // Dodaj sadržaj
+  const contentBytes = Buffer.from(content, 'utf8');
+  commands.push(...contentBytes);
+  
+  // Dodaj nekoliko praznih linija pre sečenja
+  commands.push(0x0A, 0x0A, 0x0A); // Line feeds
+  
+  // Seči papir (full cut)
+  commands.push(0x1D, 0x56, 0x00); // GS V 0 - Full cut
+  
+  // Alternativno: partial cut (ako full cut ne radi)
+  // commands.push(0x1D, 0x56, 0x01); // GS V 1 - Partial cut
+  
+  return Buffer.from(commands);
+}
+
 // Funkcija za slanje podataka na mrežni štampač preko TCP socket-a
 function sendToNetworkPrinter(
   ipAddress: string,
@@ -90,12 +123,32 @@ function sendToNetworkPrinter(
         console.error('Printer connection timeout');
         resolve(false);
       }
-    }, 5000); // 5 sekundi timeout
+    }, 10000); // 10 sekundi timeout
 
     client.connect(port, ipAddress, () => {
       console.log('Connected to printer');
-      client.write(content);
-      client.end();
+      
+      // Formatiraj sadržaj sa ESC/POS komandama
+      const escposData = formatESCPOS(content);
+      
+      // Pošalji podatke
+      client.write(escposData, (err) => {
+        if (err) {
+          console.error('Write error:', err);
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeout);
+            client.destroy();
+            resolve(false);
+          }
+        } else {
+          console.log('Data sent to printer');
+          // Sačekaj malo pre zatvaranja konekcije
+          setTimeout(() => {
+            client.end();
+          }, 500);
+        }
+      });
     });
 
     client.on('close', () => {
