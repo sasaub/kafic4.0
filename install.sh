@@ -33,10 +33,19 @@ fi
 
 echo ""
 echo "=========================================="
-echo "1. Ažuriranje sistema"
+echo "1. Ažuriranje sistema i instalacija Git"
 echo "=========================================="
 sudo apt update
 sudo apt upgrade -y
+
+# Instaliraj Git ako nije instaliran
+if command -v git &> /dev/null; then
+    echo "✓ Git je već instaliran: $(git --version)"
+else
+    echo "Instaliram Git..."
+    sudo apt install -y git
+    echo "✓ Git instaliran: $(git --version)"
+fi
 
 echo ""
 echo "=========================================="

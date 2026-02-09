@@ -4,14 +4,33 @@ Kompletan sistem za upravljanje restoranom sa QR kodom za naručivanje, administ
 
 ## 🚀 Brza instalacija (Debian/Ubuntu)
 
-```bash
-# 1. Kloniraj repozitorijum
-git clone https://github.com/sasaub/kafic4.0.git
-cd kafic4.0
+### Jedna komanda - instalira SVE (uključujući Git):
 
-# 2. Pokreni instalacionu skriptu
-chmod +x install.sh
-./install.sh
+```bash
+wget -O - https://raw.githubusercontent.com/sasaub/kafic4.0/main/quick-install.sh | bash
+```
+
+Ili sa `curl`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sasaub/kafic4.0/main/quick-install.sh | bash
+```
+
+Ova komanda će automatski:
+1. ✅ Instalirati Git (ako nije instaliran)
+2. ✅ Klonirati repozitorijum
+3. ✅ Instalirati Node.js, MySQL, i sve ostalo
+4. ✅ Konfigurisati sistem
+5. ✅ Pokrenuti servise
+
+**Nema potrebe da ručno instaliraš Git!**
+
+### Alternativa: Preuzmi i pokreni skriptu
+
+```bash
+wget https://raw.githubusercontent.com/sasaub/kafic4.0/main/quick-install.sh
+chmod +x quick-install.sh
+./quick-install.sh
 ```
 
 Skripta će automatski instalirati i konfigurisati:
