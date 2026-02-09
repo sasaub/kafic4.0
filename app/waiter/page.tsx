@@ -43,6 +43,9 @@ export default function WaiterPage() {
   }, []);
 
   const printReceipt = useCallback(async (order: Order) => {
+    console.log('=== NOVA VERZIJA 2024 ===');
+    console.log('printReceipt pozvana za order:', order.id);
+    
     // Formatiraj sadržaj za štampanje (ISTI FORMAT kao konobar-admin)
     const content = `
 ========================================
@@ -69,15 +72,20 @@ UKUPNO:                    ${order.total} RSD
 ========================================
 `;
 
+    console.log('Proveravam printer settings...');
     const printerSettings = await getPrinterSettings();
+    console.log('Printer settings:', printerSettings);
     
     if (printerSettings && printerSettings.enabled && printerSettings.ipAddress) {
       try {
+        console.log('Šaljem na printToNetworkPrinter...');
         // Štampaj preko mrežnog štampača (ISTA FUNKCIJA kao konobar-admin)
         const success = await printToNetworkPrinter({
           type: 'order',
           content
         });
+        
+        console.log('Rezultat:', success);
         
         if (success) {
           console.log('✅ Štampanje uspešno poslato na mrežni štampač');
@@ -89,6 +97,7 @@ UKUPNO:                    ${order.total} RSD
       }
     } else {
       console.warn('⚠️ Mrežni štampač nije podešen ili nije omogućen');
+      console.warn('Settings:', printerSettings);
     }
   }, []);
 
