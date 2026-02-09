@@ -55,15 +55,23 @@ export async function POST(request: NextRequest) {
     // Dodaj posao u queue umesto direktnog štampanja
     const payload = JSON.stringify({ type, content });
     
-    await query(
+    console.log('Adding print job to queue...');
+    console.log('Payload length:', payload.length);
+    
+    const result: any = await query(
       `INSERT INTO print_jobs (status, attempts, payload_json, created_at, updated_at, next_run_at) 
        VALUES ('queued', 0, ?, NOW(), NOW(), NOW())`,
       [payload]
     );
 
-    console.log('Print job added to queue');
+    const jobId = result?.insertId || 'unknown';
+    console.log('Print job added to queue, ID:', jobId);
 
-    return NextResponse.json({ ok: true, message: 'Print job queued' });
+    return NextResponse.json({ 
+      ok: true, 
+      message: 'Print job queued',
+      jobId: jobId
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Print API error:', error);
