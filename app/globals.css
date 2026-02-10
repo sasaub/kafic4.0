@@ -23,96 +23,61 @@ body {
   background: #F5F7FA;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  font-weight: 500; /* Jači font */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  /* Sprečava iOS da automatski podešava font */
-  -webkit-text-size-adjust: 100%;
-  -moz-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
-  text-size-adjust: 100%;
 }
 
-/* Jači fontovi za sve tekstove */
-* {
-  font-weight: 500;
-  /* Sprečava iOS da automatski podešava font */
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-/* Naslovi još jači */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 700 !important;
-  color: #000000 !important;
-}
-
-/* Input polja - jači font i bolji kontrast - SPECIFIČNO ZA MOBILNE */
-input, textarea, select {
-  font-weight: 600 !important;
-  color: #000000 !important;
-  /* iOS Safari fix - sprečava blede fontove */
-  -webkit-text-fill-color: #000000 !important;
-  -webkit-opacity: 1 !important;
-  opacity: 1 !important;
-  /* Sprečava iOS zoom na focus */
-  font-size: 16px !important;
-}
-
-/* Placeholder tekst */
-input::placeholder, textarea::placeholder {
-  color: #666666 !important;
-  opacity: 1 !important;
-  font-weight: 500 !important;
-  -webkit-text-fill-color: #666666 !important;
-}
-
-/* Dugmad - jači font */
-button {
-  font-weight: 600 !important;
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
-}
-
-/* Labele - jači font */
-label {
-  font-weight: 600 !important;
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
-}
-
-/* Paragraf tekst */
-p, span, div {
-  font-weight: 500;
-  color: #000000;
-  -webkit-text-fill-color: #000000;
-}
-
-/* Tabele - jači font */
-table, th, td {
-  font-weight: 500 !important;
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
-}
-
-th {
-  font-weight: 700 !important;
-}
-
-/* Mobilni specifični stilovi */
+/* Mobilni specifični stilovi - samo za telefone */
 @media (max-width: 768px) {
-  * {
-    font-weight: 600 !important; /* Još jači font na mobilnom */
-    -webkit-text-fill-color: #000000 !important;
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Sprečava iOS da automatski podešava font */
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   
+  * {
+    font-weight: 600 !important; /* Jači font samo na mobilnom */
+    -webkit-text-fill-color: currentColor !important;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Input polja - jači font i bolji kontrast - SAMO NA MOBILNOM */
   input, textarea, select {
-    font-weight: 700 !important; /* Ekstra jak font za input na mobilnom */
+    font-weight: 700 !important;
     color: #000000 !important;
     -webkit-text-fill-color: #000000 !important;
+    -webkit-opacity: 1 !important;
+    opacity: 1 !important;
+    /* Sprečava iOS zoom na focus */
+    font-size: 16px !important;
   }
   
+  /* Placeholder tekst */
+  input::placeholder, textarea::placeholder {
+    color: #666666 !important;
+    opacity: 1 !important;
+    font-weight: 600 !important;
+    -webkit-text-fill-color: #666666 !important;
+  }
+  
+  /* Dugmad - jači font */
   button {
     font-weight: 700 !important;
+    -webkit-text-fill-color: currentColor !important;
+  }
+  
+  /* Labele - jači font */
+  label {
+    font-weight: 700 !important;
+    -webkit-text-fill-color: currentColor !important;
+  }
+  
+  /* Naslovi */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700 !important;
+    -webkit-text-fill-color: currentColor !important;
   }
 }
