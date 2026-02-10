@@ -25,6 +25,24 @@ const dbConfig = {
 let pool;
 let isProcessing = false;
 
+// Konverzija srpskih karaktera u CP852 encoding
+function convertToCP852(text) {
+  const cp852Map = {
+    'Č': '\x8F', 'č': '\x86',
+    'Ć': '\x8E', 'ć': '\x87',
+    'Š': '\xA6', 'š': '\xA7',
+    'Ž': '\xAC', 'ž': '\xAD',
+    'Đ': '\xD0', 'đ': '\xD1'
+  };
+  
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    result += cp852Map[char] || char;
+  }
+  return result;
+}
+
 // Inicijalizuj database pool
 async function initDatabase() {
   pool = mysql.createPool(dbConfig);
@@ -38,14 +56,15 @@ function formatESCPOS(content) {
   // Inicijalizuj štampač
   commands.push(0x1B, 0x40); // ESC @ - Initialize printer
   
-  // Postavi encoding
-  commands.push(0x1B, 0x74, 0x10); // ESC t 16 - Select character code table
+  // Postavi encoding za srpske karaktere (CP852 - Central European)
+  commands.push(0x1B, 0x74, 0x12); // ESC t 18 - CP852 code page
   
   // Postavi veličinu fonta (normalna)
   commands.push(0x1D, 0x21, 0x00); // GS ! 0 - Normal size
   
-  // Dodaj sadržaj
-  const contentBytes = Buffer.from(content, 'utf8');
+  // Konvertuj srpske karaktere u CP852
+  const convertedContent = convertToCP852(content);
+  const contentBytes = Buffer.from(convertedContent, 'binary');
   commands.push(...contentBytes);
   
   // Dodaj više praznih linija pre sečenja (da se sadržaj ne iseče prerano)
