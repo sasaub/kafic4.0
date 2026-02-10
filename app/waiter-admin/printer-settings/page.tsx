@@ -79,7 +79,7 @@ export default function PrinterSettingsPage() {
         TEST ŠTAMPE
 ========================================
 
-QR RESTAURANT
+OVO NIJE FISKALNI ISEČAK
 IP: ${settings.ipAddress}
 PORT: ${settings.port}
 

@@ -31,9 +31,37 @@ hostname
 
 Ako je hostname `menikod`, onda možeš pristupiti sa `menikod.local:3000`
 
-### 4. Promeni hostname (opciono)
+### 4. Dodaj hostname alias (PREPORUČENO)
 
-Ako želiš da promeniš hostname u `menikod`:
+**VAŽNO:** Hostname i username su različite stvari!
+- Hostname = ime računara na mreži
+- Username = korisničko ime za login (root)
+
+Promena hostname-a **NEĆE** uticati na login kao `root`!
+
+#### Opcija A: Dodaj alias (zadržava root + dodaje menikod)
+
+```bash
+sudo nano /etc/hosts
+```
+
+Ako imaš:
+```
+127.0.1.1    root
+```
+
+Promeni u:
+```
+127.0.1.1    root menikod
+```
+
+Sačuvaj (Ctrl+O, Enter, Ctrl+X)
+
+Sada možeš pristupiti sa:
+- `http://root.local:3000` (staro ime)
+- `http://menikod.local:3000` (novo ime)
+
+#### Opcija B: Potpuno promeni hostname u menikod
 
 ```bash
 # Promeni hostname
@@ -43,19 +71,17 @@ sudo hostnamectl set-hostname menikod
 sudo nano /etc/hosts
 ```
 
-U `/etc/hosts` fajlu, promeni:
+Promeni:
 ```
-127.0.0.1       localhost
-127.0.1.1       staro-ime
+127.0.1.1    root
 ```
 
 U:
 ```
-127.0.0.1       localhost
-127.0.1.1       menikod
+127.0.1.1    menikod
 ```
 
-Sačuvaj (Ctrl+O, Enter, Ctrl+X)
+**Napomena:** I dalje se logujеš kao `root` - samo se ime računara menja!
 
 ### 5. Restartuj Avahi
 

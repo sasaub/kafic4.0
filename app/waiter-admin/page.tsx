@@ -97,7 +97,7 @@ export default function WaiterAdminPage() {
     // Formatiraj sadržaj za štampanje
     const content = `
 ========================================
-        QR RESTAURANT
+   OVO NIJE FISKALNI ISEČAK
 ========================================
 
 Narudžba #${order.id}

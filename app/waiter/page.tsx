@@ -49,7 +49,7 @@ export default function WaiterPage() {
     // Formatiraj sadržaj za štampanje (ISTI FORMAT kao konobar-admin)
     const content = `
 ========================================
-        QR RESTAURANT
+   OVO NIJE FISKALNI ISEČAK
 ========================================
 
 Narudžba #${order.id}
