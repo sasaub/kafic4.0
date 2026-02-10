@@ -24,3 +24,25 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Fix za mobilne browsere - Chrome i Safari */
+@media (max-width: 768px) {
+  /* Isključi antialiasing koji pravi blede fontove */
+  * {
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: unset !important;
+  }
+  
+  /* Input polja - forsiraj crnu boju */
+  input, textarea, select {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+    opacity: 1 !important;
+  }
+  
+  /* Svi tekstovi - forsiraj crnu boju */
+  body, h1, h2, h3, h4, h5, h6, p, span, div, label, button, a {
+    color: inherit !important;
+    -webkit-text-fill-color: inherit !important;
+  }
+}
