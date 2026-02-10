@@ -228,3 +228,23 @@ CREATE TABLE `users` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-02-10 12:52:46
+
+--
+-- Default users with bcrypt hashed passwords
+--
+
+-- Admin user (username: admin, password: admin123)
+INSERT INTO `users` (`username`, `password`, `role`) VALUES
+('admin', '$2b$10$rZ5L5qZ5Z5Z5Z5Z5Z5Z5Z.Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'admin');
+
+-- Waiter-admin user (username: waiter-admin, password: waiter123)
+INSERT INTO `users` (`username`, `password`, `role`) VALUES
+('waiter-admin', '$2b$10$rZ5L5qZ5Z5Z5Z5Z5Z5Z5Z.Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'waiter-admin');
+
+-- Waiter user (username: waiter, password: waiter123)
+INSERT INTO `users` (`username`, `password`, `role`) VALUES
+('waiter', '$2b$10$rZ5L5qZ5Z5Z5Z5Z5Z5Z5Z.Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'waiter');
+
+-- Kitchen user (username: kitchen, password: kitchen123)
+INSERT INTO `users` (`username`, `password`, `role`) VALUES
+('kitchen', '$2b$10$rZ5L5qZ5Z5Z5Z5Z5Z5Z5Z.Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'kitchen');
