@@ -28,8 +28,9 @@ body {
 /* Mobilni specifični stilovi - samo za telefone */
 @media (max-width: 768px) {
   body {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    /* ISKLJUČI font smoothing koji pravi blede fontove */
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: unset !important;
     /* Sprečava iOS da automatski podešava font */
     -webkit-text-size-adjust: 100%;
     -moz-text-size-adjust: 100%;
@@ -38,19 +39,22 @@ body {
   }
   
   * {
-    font-weight: 600 !important; /* Jači font samo na mobilnom */
-    -webkit-text-fill-color: currentColor !important;
+    /* ISKLJUČI font smoothing */
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: unset !important;
+    /* Forsiraj da koristi originalnu boju teksta */
+    -webkit-text-fill-color: inherit !important;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
   
-  /* Input polja - jači font i bolji kontrast - SAMO NA MOBILNOM */
+  /* Input polja - SAMO NA MOBILNOM */
   input, textarea, select {
-    font-weight: 700 !important;
     color: #000000 !important;
     -webkit-text-fill-color: #000000 !important;
     -webkit-opacity: 1 !important;
     opacity: 1 !important;
+    -webkit-font-smoothing: none !important;
     /* Sprečava iOS zoom na focus */
     font-size: 16px !important;
   }
@@ -59,25 +63,13 @@ body {
   input::placeholder, textarea::placeholder {
     color: #666666 !important;
     opacity: 1 !important;
-    font-weight: 600 !important;
     -webkit-text-fill-color: #666666 !important;
   }
   
-  /* Dugmad - jači font */
-  button {
-    font-weight: 700 !important;
-    -webkit-text-fill-color: currentColor !important;
-  }
-  
-  /* Labele - jači font */
-  label {
-    font-weight: 700 !important;
-    -webkit-text-fill-color: currentColor !important;
-  }
-  
-  /* Naslovi */
-  h1, h2, h3, h4, h5, h6 {
-    font-weight: 700 !important;
-    -webkit-text-fill-color: currentColor !important;
+  /* Naslovi, dugmad, labele - forsiraj originalnu boju */
+  h1, h2, h3, h4, h5, h6, button, label, p, span, div, a {
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: unset !important;
+    -webkit-text-fill-color: inherit !important;
   }
 }
