@@ -49,10 +49,10 @@ export default function WaiterPage() {
     // Formatiraj sadržaj za štampanje (ISTI FORMAT kao konobar-admin)
     const content = `
 ========================================
-   OVO NIJE FISKALNI ISEČAK
+   OVO NIJE FISKALNI ISECAK
 ========================================
 
-Narudžbina #${order.id}
+Narudzbina #${order.id}
 ${order.table}
 Vreme: ${order.time}
 

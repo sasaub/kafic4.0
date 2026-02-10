@@ -25,20 +25,20 @@ const dbConfig = {
 let pool;
 let isProcessing = false;
 
-// Konverzija srpskih karaktera u CP852 encoding
-function convertToCP852(text) {
-  const cp852Map = {
-    'Č': '\x8F', 'č': '\x86',
-    'Ć': '\x8E', 'ć': '\x87',
-    'Š': '\xA6', 'š': '\xA7',
-    'Ž': '\xAC', 'ž': '\xAD',
-    'Đ': '\xD0', 'đ': '\xD1'
+// Konverzija srpskih karaktera u ASCII (bez kvačica)
+function convertToASCII(text) {
+  const asciiMap = {
+    'Č': 'C', 'č': 'c',
+    'Ć': 'C', 'ć': 'c',
+    'Š': 'S', 'š': 's',
+    'Ž': 'Z', 'ž': 'z',
+    'Đ': 'Dj', 'đ': 'dj'
   };
   
   let result = '';
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
-    result += cp852Map[char] || char;
+    result += asciiMap[char] || char;
   }
   return result;
 }
@@ -56,15 +56,15 @@ function formatESCPOS(content) {
   // Inicijalizuj štampač
   commands.push(0x1B, 0x40); // ESC @ - Initialize printer
   
-  // Postavi encoding za srpske karaktere (CP852 - Central European)
-  commands.push(0x1B, 0x74, 0x12); // ESC t 18 - CP852 code page
+  // Postavi encoding na standardni ASCII
+  commands.push(0x1B, 0x74, 0x00); // ESC t 0 - PC437 (USA, Standard Europe)
   
   // Postavi veličinu fonta (normalna)
   commands.push(0x1D, 0x21, 0x00); // GS ! 0 - Normal size
   
-  // Konvertuj srpske karaktere u CP852
-  const convertedContent = convertToCP852(content);
-  const contentBytes = Buffer.from(convertedContent, 'binary');
+  // Konvertuj srpske karaktere u ASCII
+  const convertedContent = convertToASCII(content);
+  const contentBytes = Buffer.from(convertedContent, 'ascii');
   commands.push(...contentBytes);
   
   // Dodaj više praznih linija pre sečenja (da se sadržaj ne iseče prerano)
