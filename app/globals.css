@@ -40,13 +40,26 @@ body {
     opacity: 1 !important;
   }
   
-  /* Svi tekstovi - ali NE prepisuj inline stilove */
-  body, h1, h2, h3, h4, h5, h6, p, span, div, label, a {
+  /* Forsiraj da se vide inline stilovi (bele boje na headerima i dugmadima) */
+  *[style*="color"] {
     -webkit-text-fill-color: currentColor !important;
   }
   
-  /* Dugmad - zadrži inline stilove */
-  button {
-    -webkit-text-fill-color: currentColor !important;
+  /* Za sve ostale tekstove bez inline stilova - forsiraj tamnu boju */
+  body:not([style*="color"]),
+  h1:not([style*="color"]), 
+  h2:not([style*="color"]), 
+  h3:not([style*="color"]), 
+  h4:not([style*="color"]), 
+  h5:not([style*="color"]), 
+  h6:not([style*="color"]),
+  p:not([style*="color"]), 
+  span:not([style*="color"]), 
+  div:not([style*="color"]), 
+  label:not([style*="color"]), 
+  button:not([style*="color"]), 
+  a:not([style*="color"]) {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
   }
 }
