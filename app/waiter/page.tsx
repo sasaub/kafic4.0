@@ -52,7 +52,7 @@ export default function WaiterPage() {
    OVO NIJE FISKALNI ISEČAK
 ========================================
 
-Narudžba #${order.id}
+Narudžbina #${order.id}
 ${order.table}
 Vreme: ${order.time}
 

@@ -100,7 +100,7 @@ export default function WaiterAdminPage() {
    OVO NIJE FISKALNI ISEČAK
 ========================================
 
-Narudžba #${order.id}
+Narudžbina #${order.id}
 ${order.table}
 Vreme: ${order.time}
 
