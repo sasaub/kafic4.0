@@ -230,21 +230,21 @@ CREATE TABLE `users` (
 -- Dump completed on 2026-02-10 12:52:46
 
 --
--- Default users with bcrypt hashed passwords
+-- Default users with plain text passwords
 --
 
 -- Admin user (username: admin, password: admin123)
 INSERT INTO `users` (`username`, `password`, `role`) VALUES
-('admin', '$2b$10$rZ5L5qZ5Z5Z5Z5Z5Z5Z5Z.Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'admin');
+('admin', 'admin123', 'admin');
 
--- Waiter-admin user (username: waiter-admin, password: waiter123)
+-- Konobar-admin user (username: konobaradmin, password: konobaradmin123)
 INSERT INTO `users` (`username`, `password`, `role`) VALUES
-('waiter-admin', '$2b$10$rZ5L5qZ5Z5Z5Z5Z5Z5Z5Z.Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'waiter-admin');
+('konobaradmin', 'konobaradmin123', 'waiter-admin');
 
--- Waiter user (username: waiter, password: waiter123)
+-- Konobar user (username: konobar, password: konobar123)
 INSERT INTO `users` (`username`, `password`, `role`) VALUES
-('waiter', '$2b$10$rZ5L5qZ5Z5Z5Z5Z5Z5Z5Z.Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'waiter');
+('konobar', 'konobar123', 'waiter');
 
--- Kitchen user (username: kitchen, password: kitchen123)
+-- Kuhinja user (username: kuhinja, password: kuhinja123)
 INSERT INTO `users` (`username`, `password`, `role`) VALUES
-('kitchen', '$2b$10$rZ5L5qZ5Z5Z5Z5Z5Z5Z5Z.Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'kitchen');
+('kuhinja', 'kuhinja123', 'kitchen');
