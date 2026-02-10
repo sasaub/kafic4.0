@@ -272,7 +272,28 @@ echo "✓ print-worker.service kreiran"
 
 echo ""
 echo "=========================================="
-echo "11. Instalacija Nginx (opciono)"
+echo "11. Instalacija Avahi mDNS (opciono)"
+echo "=========================================="
+read -p "Da li želiš da instaliraš Avahi za lokalni pristup preko hostname.local? (y/n) " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Instaliram Avahi..."
+    $SUDO apt install -y avahi-daemon avahi-utils
+    $SUDO systemctl start avahi-daemon
+    $SUDO systemctl enable avahi-daemon
+    
+    HOSTNAME=$(hostname)
+    echo "✓ Avahi instaliran"
+    echo "✓ Možeš pristupiti preko: http://$HOSTNAME.local:3000"
+    AVAHI_INSTALLED=true
+else
+    echo "⊘ Avahi preskočen"
+    AVAHI_INSTALLED=false
+fi
+
+echo ""
+echo "=========================================="
+echo "12. Instalacija Nginx (opciono)"
 echo "=========================================="
 read -p "Da li želiš da instaliraš Nginx reverse proxy (uklanja :3000 iz URL-a)? (y/n) " -n 1 -r
 echo ""
@@ -312,7 +333,7 @@ fi
 
 echo ""
 echo "=========================================="
-echo "12. Pokretanje servisa"
+echo "13. Pokretanje servisa"
 echo "=========================================="
 
 $SUDO systemctl daemon-reload
@@ -325,7 +346,7 @@ echo "✓ Servisi pokrenuti"
 
 echo ""
 echo "=========================================="
-echo "13. Provera statusa"
+echo "14. Provera statusa"
 echo "=========================================="
 
 sleep 3
@@ -352,8 +373,14 @@ echo ""
 echo "🌐 Pristup aplikaciji:"
 if [ "$NGINX_INSTALLED" = true ]; then
     echo "  http://$(hostname -I | awk '{print $1}')"
+    if [ "$AVAHI_INSTALLED" = true ]; then
+        echo "  http://$(hostname).local"
+    fi
 else
     echo "  http://$(hostname -I | awk '{print $1}'):3000"
+    if [ "$AVAHI_INSTALLED" = true ]; then
+        echo "  http://$(hostname).local:3000"
+    fi
 fi
 echo ""
 echo "👤 Default admin nalog:"
