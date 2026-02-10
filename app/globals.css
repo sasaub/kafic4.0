@@ -40,9 +40,13 @@ body {
     opacity: 1 !important;
   }
   
-  /* Svi tekstovi - forsiraj crnu boju */
-  body, h1, h2, h3, h4, h5, h6, p, span, div, label, button, a {
-    color: inherit !important;
-    -webkit-text-fill-color: inherit !important;
+  /* Svi tekstovi - ali NE prepisuj inline stilove */
+  body, h1, h2, h3, h4, h5, h6, p, span, div, label, a {
+    -webkit-text-fill-color: currentColor !important;
+  }
+  
+  /* Dugmad - zadrži inline stilove */
+  button {
+    -webkit-text-fill-color: currentColor !important;
   }
 }
