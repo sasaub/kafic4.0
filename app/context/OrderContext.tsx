@@ -45,6 +45,20 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     const RETRY_DELAY = 500;
     
     try {
+      // Kreiraj URL sa parametrima za filtriranje
+      let url = '/api/orders';
+      const params = new URLSearchParams();
+      
+      // Ako je waiter-admin, filtriraj po waiter_id
+      if (user && user.role === 'waiter-admin') {
+        params.append('waiter_id', user.id.toString());
+      }
+      // Ako je waiter, ne dodavaj filter (vidi sve)
+      
+      if (params.toString()) {
+        url += '?' + params.toString();
+      }
+      
       // Kreiraj timeout signal (fallback za starije browsere)
       let abortController: AbortController | null = null;
       let timeoutId: NodeJS.Timeout | null = null;
@@ -56,7 +70,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         }, 8000); // 8 sekundi timeout
       }
       
-      const response = await fetch('/api/orders', {
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +142,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     } finally {
       // Orders loaded
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchOrders();

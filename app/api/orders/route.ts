@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const destination = searchParams.get('destination');
     const date = searchParams.get('date');
+    const waiterId = searchParams.get('waiter_id'); // Novi parametar za filtriranje
 
     // Prvo uzmi sve porudžbine
     let sql = `
@@ -99,6 +100,11 @@ export async function GET(request: NextRequest) {
     if (date) {
       sql += ' AND o.date = ?';
       params.push(date);
+    }
+    // Filtriraj po waiter_id ako je prosleđen (za waiter-admin)
+    if (waiterId) {
+      sql += ' AND o.waiter_id = ?';
+      params.push(parseInt(waiterId));
     }
 
     sql += ' ORDER BY o.created_at DESC';
